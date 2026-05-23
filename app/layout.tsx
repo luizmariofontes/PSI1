@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AppProvider } from '@/lib/app-context'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -35,9 +36,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className="bg-slate-50">
-      <body className="font-sans antialiased">
-        {children}
+    <html lang="pt-BR" className="h-full">
+      <body className="font-sans antialiased h-full overflow-hidden">
+        <AppProvider>{children}</AppProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

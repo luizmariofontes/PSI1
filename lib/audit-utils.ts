@@ -1,4 +1,4 @@
-import { AuditRecord, AuditStats, CategoryStats, Control, ControlResponse } from '../types'
+import { AuditRecord, AuditStats, CategoryStats, Control, ControlResponse } from './types'
 
 
 export function calculateStats(responses: ControlResponse[], totalControls: number): AuditStats {

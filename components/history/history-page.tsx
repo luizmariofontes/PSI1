@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatDate, calculateStats, getStatusColor, getStatusLabel } from '@/lib/audit-utils'
 import { iso27002Controls } from '@/lib/data/iso27002-controls'
 import { iso27701Controls } from '@/lib/data/iso27701-controls'
-import { Shield, Lock, ArrowLeft, BarChart3, Eye, Trash2 } from 'lucide-react'
+import { Shield, Lock, BarChart3, Eye } from 'lucide-react'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useState } from 'react'
 
@@ -18,7 +18,6 @@ export function HistoryPage() {
     setSelectedAuditId,
     setDashboardMode,
     setView,
-    audits,
   } = useApp()
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -34,12 +33,8 @@ export function HistoryPage() {
   if (allAudits.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => setView('home')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <h2 className="text-2xl font-bold text-slate-900">Histórico de Auditorias</h2>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-900">Histórico de Auditorias</h2>
         </div>
 
         <Card>
@@ -52,8 +47,8 @@ export function HistoryPage() {
               <p className="text-slate-500 mb-4">
                 Realize uma auditoria para visualizar o histórico.
               </p>
-              <Button onClick={() => setView('home')}>
-                Ir para Início
+              <Button onClick={() => setView('dashboard')}>
+                Ir para o Dashboard
               </Button>
             </div>
           </CardContent>
@@ -65,12 +60,8 @@ export function HistoryPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => setView('home')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
-        <h2 className="text-2xl font-bold text-slate-900">Histórico de Auditorias</h2>
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-slate-900">Histórico de Auditorias</h2>
       </div>
 
       {/* Audits Table */}

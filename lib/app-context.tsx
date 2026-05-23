@@ -23,7 +23,8 @@ interface AppState {
 
 interface AppContextType extends AppState {
   // Company actions
-  login: (companyName: string) => void
+  login: (email: string, password: string) => boolean
+  signup: (companyName: string, email: string, password: string) => boolean
   logout: () => void
   
   // Audit actions
@@ -53,7 +54,17 @@ function loadFromStorage(): Partial<AppState> {
   try {
     const data = localStorage.getItem(STORAGE_KEY)
     if (data) {
-      return JSON.parse(data)
+      const parsed = JSON.parse(data)
+      const companies = (parsed.companies || []).map((company: Partial<Company>) => ({
+        ...company,
+        email: company.email || `${company.name || 'empresa'}@mock.local`.toLowerCase().replace(/\s+/g, ''),
+        password: company.password || 'mock123',
+      }))
+
+      return {
+        ...parsed,
+        companies,
+      }
     }
   } catch (e) {
     console.error('Error loading from storage:', e)
@@ -83,7 +94,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     currentAuditDate: new Date().toISOString().split('T')[0],
     currentResponses: [],
     audits: [],
-    currentView: 'login',
+    currentView: 'login' as ViewMode,
     dashboardMode: 'current',
     selectedAuditId: null,
   })
@@ -105,28 +116,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveToStorage({ companies: state.companies, audits: state.audits })
   }, [state.companies, state.audits])
 
-  const login = (companyName: string) => {
-    let company = state.companies.find(c => c.name.toLowerCase() === companyName.toLowerCase())
-    
+  const login = (email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase()
+    const company = state.companies.find(
+      c => c.email.toLowerCase() === normalizedEmail && c.password === password
+    )
+
     if (!company) {
-      company = {
-        id: generateId(),
-        name: companyName,
-        createdAt: new Date().toISOString(),
-      }
-      setState(prev => ({
-        ...prev,
-        companies: [...prev.companies, company!],
-        currentCompany: company!,
-        currentView: 'home',
-      }))
-    } else {
-      setState(prev => ({
-        ...prev,
-        currentCompany: company!,
-        currentView: 'home',
-      }))
+      return false
     }
+
+    setState(prev => ({
+      ...prev,
+      currentCompany: company,
+      currentView: 'dashboard',
+    }))
+
+    return true
+  }
+
+  const signup = (companyName: string, email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase()
+    const existingCompany = state.companies.find(c => c.email.toLowerCase() === normalizedEmail)
+
+    if (existingCompany) {
+      return false
+    }
+
+    const company = {
+      id: generateId(),
+      name: companyName.trim(),
+      email: normalizedEmail,
+      password,
+      createdAt: new Date().toISOString(),
+    }
+
+    setState(prev => ({
+      ...prev,
+      companies: [...prev.companies, company],
+      currentCompany: company,
+      currentView: 'dashboard',
+    }))
+
+    return true
   }
 
   const logout = () => {
@@ -242,6 +274,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         ...state,
         login,
+        signup,
         logout,
         selectModule,
         setAuditDate,

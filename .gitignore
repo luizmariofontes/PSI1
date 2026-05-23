@@ -2,7 +2,7 @@
 
 # dependencies
 /node_modules
-
+v10
 # next.js
 /.next/
 /out/

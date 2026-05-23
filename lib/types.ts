@@ -28,6 +28,8 @@ export interface AuditRecord {
 export interface Company {
   id: string
   name: string
+  email: string
+  password: string
   createdAt: string
 }
 
@@ -48,6 +50,6 @@ export interface CategoryStats {
   stats: AuditStats
 }
 
-export type ViewMode = 'login' | 'home' | 'audit' | 'dashboard' | 'history'
+export type ViewMode = 'login' | 'dashboard' | 'audit' | 'history'
 
 export type DashboardMode = 'current' | 'comparative'
