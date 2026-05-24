@@ -436,23 +436,8 @@ func otpEmailHTML(companyName string, purpose string, code string) string {
             <tr>
               <td>
 				<div style="margin-bottom:28px;">
-				  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 100" width="210" height="60" aria-label="WhoISO" role="img" style="display:block;">
-				    <defs>
-				      <linearGradient id="emailShield" x1="0%%" y1="0%%" x2="100%%" y2="100%%">
-				        <stop offset="0%%" stop-color="#0f172a" stop-opacity="1"></stop>
-				        <stop offset="100%%" stop-color="#334155" stop-opacity="1"></stop>
-				      </linearGradient>
-				      <linearGradient id="emailAccent" x1="0%%" y1="0%%" x2="100%%" y2="100%%">
-				        <stop offset="0%%" stop-color="#3b82f6" stop-opacity="1"></stop>
-				        <stop offset="100%%" stop-color="#06b6d4" stop-opacity="1"></stop>
-				      </linearGradient>
-				    </defs>
-				    <path d="M45 15 L75 25 V55 C75 75 45 90 45 90 C45 90 15 75 15 55 V25 Z" fill="url(#emailShield)"></path>
-				    <line x1="61" y1="56" x2="70" y2="65" stroke="url(#emailAccent)" stroke-width="5" stroke-linecap="round"></line>
-				    <circle cx="50" cy="45" r="14" fill="none" stroke="url(#emailAccent)" stroke-width="4"></circle>
-				    <text x="100" y="65" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="44" fill="#0f172a" letter-spacing="-1">Who<tspan fill="#38bdf8">ISO</tspan></text>
-				    <text x="104" y="85" font-family="Arial,Helvetica,sans-serif" font-weight="500" font-size="12" fill="#64748b" letter-spacing="2">AUDITORIA LTDA</text>
-				  </svg>
+				  <div style="font-size:28px;line-height:1;font-weight:800;color:#0f172a;">Who<span style="color:#38bdf8;">ISO</span></div>
+				  <div style="margin-top:8px;font-size:12px;letter-spacing:3px;font-weight:600;color:#64748b;">AUDITORIA LTDA</div>
 				</div>
                 <h1 style="font-size:26px;line-height:1.2;margin:0 0 10px;color:#0f172a;">%s</h1>
                 <p style="font-size:15px;line-height:1.6;margin:0 0 24px;color:#475569;">%s</p>
