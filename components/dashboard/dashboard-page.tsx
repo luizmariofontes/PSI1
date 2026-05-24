@@ -158,7 +158,7 @@ export function DashboardPage() {
               onClick={() => setDashboardMode('current')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
               style={{
-                background: dashboardMode === 'current' ? '#6366f1' : 'transparent',
+                background: dashboardMode === 'current' ? '#3b82f6' : 'transparent',
                 color: dashboardMode === 'current' ? '#fff' : '#64748b',
               }}
             >
@@ -169,7 +169,7 @@ export function DashboardPage() {
               onClick={() => setDashboardMode('comparative')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
               style={{
-                background: dashboardMode === 'comparative' ? '#6366f1' : 'transparent',
+                background: dashboardMode === 'comparative' ? '#3b82f6' : 'transparent',
                 color: dashboardMode === 'comparative' ? '#fff' : '#64748b',
               }}
             >
@@ -186,7 +186,7 @@ export function DashboardPage() {
         {hasAudits && (
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Total de Auditorias', value: allAudits.length, icon: <History className="h-5 w-5" />, color: '#6366f1', bg: '#6366f115' },
+              { label: 'Total de Auditorias', value: allAudits.length, icon: <History className="h-5 w-5" />, color: '#3b82f6', bg: '#3b82f615' },
               { label: 'ISO 27001', value: iso27001Audits.length, icon: <Shield className="h-5 w-5" />, color: '#10b981', bg: '#10b98115' },
               { label: 'ISO 27701', value: iso27701Audits.length, icon: <Lock className="h-5 w-5" />, color: '#f59e0b', bg: '#f59e0b15' },
             ].map(({ label, value, icon, color, bg }) => (
@@ -375,8 +375,8 @@ export function DashboardPage() {
             className="rounded-2xl p-10 text-center"
             style={{ background: '#fff', border: '1px dashed rgba(0,0,0,0.1)' }}
           >
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#6366f115' }}>
-              <BarChart3 className="h-7 w-7 text-indigo-400" />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#3b82f615' }}>
+              <BarChart3 className="h-7 w-7 text-blue-500" />
             </div>
             <h3 className="text-base font-semibold text-slate-700 mb-1">Nenhuma auditoria ainda</h3>
             <p className="text-sm text-slate-400">

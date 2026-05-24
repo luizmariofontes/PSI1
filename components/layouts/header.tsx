@@ -2,7 +2,8 @@
 
 import { useApp } from '@/lib/app-context'
 import { Button } from '@/components/ui/button'
-import { LogOut, Home, BarChart3, History, FileText } from 'lucide-react'
+import { LogOut, Home, BarChart3, History } from 'lucide-react'
+import { WhoISOLogo } from '@/components/brand/whoiso-logo'
 
 export function Header() {
   const { currentCompany, logout, currentView, setView, currentModule, clearCurrentAudit } = useApp()
@@ -23,7 +24,7 @@ export function Header() {
               onClick={() => handleNavigation('dashboard')}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
-              <h1 className="text-xl font-bold text-slate-900">WhoISO</h1>
+              <WhoISOLogo className="w-36" />
             </button>
             
             {currentCompany && (

@@ -8,6 +8,7 @@ import { useApp } from '@/lib/app-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { WhoISOLogo } from '@/components/brand/whoiso-logo'
 
 export function SignupForm() {
   const router = useRouter()
@@ -44,17 +45,9 @@ export function SignupForm() {
     <div className="grid min-h-screen bg-white md:grid-cols-[0.94fr_1.06fr]">
       <section className="flex min-h-screen items-center justify-center px-6 py-10 md:px-10 lg:px-16">
         <div className="w-full max-w-md">
-          <div className="mb-10 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-lg font-bold text-white">
-              W
-            </div>
-            <div>
-              <p className="text-xl font-bold text-slate-900">WhoISO</p>
-              <p className="text-sm text-slate-500">Diagnóstico de conformidade</p>
-            </div>
-          </div>
+          <WhoISOLogo className="mb-10 w-48" />
 
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-500">Cadastro</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">Cadastro</p>
           <h1 className="mt-3 text-4xl font-bold text-slate-900">Crie sua conta</h1>
           <p className="mt-3 text-base text-slate-500">
             Cadastre sua empresa para acessar o painel imediatamente.
@@ -121,14 +114,14 @@ export function SignupForm() {
               </div>
             )}
 
-            <Button type="submit" className="h-12 w-full rounded-xl bg-indigo-600 font-semibold hover:bg-indigo-700">
+            <Button type="submit" className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700">
               Criar conta
             </Button>
           </form>
 
           <p className="mt-7 text-center text-sm text-slate-500">
             Ja tem conta?{' '}
-            <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-700">
+            <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700">
               Entrar
             </Link>
           </p>
@@ -153,7 +146,7 @@ export function SignupForm() {
 
           <div className="space-y-4">
             {[
-              { label: 'Dashboard com indicadores de auditoria', color: '#6366f1' },
+              { label: 'Dashboard com indicadores de auditoria', color: '#3b82f6' },
               { label: 'Historico por empresa cadastrada', color: '#10b981' },
               { label: 'Fluxos separados para seguranca e privacidade', color: '#f59e0b' },
             ].map(({ label, color }) => (

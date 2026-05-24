@@ -6,6 +6,7 @@ import { useApp } from '@/lib/app-context'
 import { ViewMode } from '@/lib/types'
 import { getTodayDateString } from '@/lib/audit-utils'
 import { StartAuditConfirmDialog } from '@/components/audit/start-audit-confirm-dialog'
+import { WhoISOLogo } from '@/components/brand/whoiso-logo'
 
 // ── ItsHover Animated SVG Icons ──────────────────────────────────────────────
 
@@ -202,7 +203,7 @@ interface NavItemProps {
   accent?: string
 }
 
-function NavItem({ icon, label, active, collapsed, onClick, accent = '#6366f1' }: NavItemProps) {
+function NavItem({ icon, label, active, collapsed, onClick, accent = '#3b82f6' }: NavItemProps) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -309,7 +310,7 @@ export function Sidebar() {
       style={{
         width: SIDEBAR_W,
         minWidth: SIDEBAR_W,
-        background: 'linear-gradient(180deg, #0f172a 0%, #0d1526 100%)',
+        background: 'linear-gradient(180deg, #0f172a 0%, #111827 100%)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
         transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1), min-width 0.25s cubic-bezier(0.4,0,0.2,1)',
       }}
@@ -326,19 +327,14 @@ export function Sidebar() {
           minHeight: collapsed ? 104 : 72,
         }}
       >
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Logo mark */}
-          <div
-            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
-          >
-            W
-          </div>
-          {!collapsed && (
+        <div className="flex min-w-0 items-center">
+          {collapsed ? (
+            <WhoISOLogo markOnly className="w-9 flex-shrink-0" />
+          ) : (
             <div className="min-w-0 overflow-hidden">
-              <p className="text-white font-semibold text-sm leading-tight truncate">WhoISO</p>
+              <WhoISOLogo inverse className="w-36" />
               {currentCompany && (
-                <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <p className="mt-1 text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>
                   {currentCompany.name}
                 </p>
               )}
@@ -350,7 +346,7 @@ export function Sidebar() {
           onClick={() => setCollapsed(c => !c)}
           aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
           title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-          className="flex shrink-0 items-center justify-center transition-all duration-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
+          className="flex shrink-0 items-center justify-center transition-all duration-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
           style={{
             width: 30,
             height: 30,
@@ -381,7 +377,7 @@ export function Sidebar() {
             active={currentView === 'dashboard'}
             collapsed={collapsed}
             onClick={() => navigate('dashboard')}
-            accent="#6366f1"
+            accent="#3b82f6"
           />
           <NavItem
             icon={<IconHistory />}
@@ -389,7 +385,7 @@ export function Sidebar() {
             active={currentView === 'history'}
             collapsed={collapsed}
             onClick={() => navigate('history')}
-            accent="#6366f1"
+            accent="#06b6d4"
           />
         </div>
 

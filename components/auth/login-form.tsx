@@ -8,6 +8,7 @@ import { useApp } from '@/lib/app-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { WhoISOLogo } from '@/components/brand/whoiso-logo'
 
 export function LoginForm() {
   const router = useRouter()
@@ -38,18 +39,10 @@ export function LoginForm() {
     <div className="grid min-h-screen bg-white md:grid-cols-[1.06fr_0.94fr]">
       <section className="hidden min-h-screen flex-col justify-between bg-[#0f172a] px-12 py-10 text-white lg:px-16 md:flex">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold">
-              W
-            </div>
-            <div>
-              <p className="text-xl font-bold leading-tight">WhoISO</p>
-              <p className="text-sm text-slate-400">Diagnóstico de conformidade</p>
-            </div>
-          </div>
+          <WhoISOLogo inverse className="w-48" />
 
           <div className="mt-20 max-w-xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-indigo-300">Acesso seguro</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-300">Acesso seguro</p>
             <h1 className="mt-4 text-5xl font-bold leading-tight tracking-normal lg:text-6xl">
               Acompanhe a maturidade ISO da sua empresa.
             </h1>
@@ -62,7 +55,7 @@ export function LoginForm() {
         <div className="grid grid-cols-3 gap-4">
           {[
             { label: 'ISO 27001', icon: ShieldCheck, color: '#10b981' },
-            { label: 'Controles', icon: BarChart3, color: '#6366f1' },
+            { label: 'Controles', icon: BarChart3, color: '#3b82f6' },
             { label: 'Privacidade', icon: Lock, color: '#f59e0b' },
           ].map(({ label, icon: Icon, color }) => (
             <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
@@ -76,18 +69,10 @@ export function LoginForm() {
       <section className="flex min-h-screen items-center justify-center px-6 py-10 md:px-10 lg:px-16">
         <div className="w-full max-w-md">
           <div className="mb-10 md:hidden">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-lg font-bold text-white">
-                W
-              </div>
-              <div>
-                <p className="text-xl font-bold text-slate-900">WhoISO</p>
-                <p className="text-sm text-slate-500">Diagnóstico de conformidade</p>
-              </div>
-            </div>
+            <WhoISOLogo className="w-48" />
           </div>
 
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-500">Login</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">Login</p>
           <h2 className="mt-3 text-4xl font-bold text-slate-900">Bem-vindo de volta</h2>
           <p className="mt-3 text-base text-slate-500">
             Use suas credenciais cadastradas para acessar o painel.
@@ -136,14 +121,14 @@ export function LoginForm() {
               </div>
             )}
 
-            <Button type="submit" className="h-12 w-full rounded-xl bg-indigo-600 font-semibold hover:bg-indigo-700">
+            <Button type="submit" className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700">
               Entrar
             </Button>
           </form>
 
           <p className="mt-7 text-center text-sm text-slate-500">
             Ainda nao tem conta?{' '}
-            <Link href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700">
+            <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-700">
               Criar cadastro
             </Link>
           </p>
