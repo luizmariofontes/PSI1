@@ -331,14 +331,7 @@ export function Sidebar() {
           {collapsed ? (
             <WhoISOLogo markOnly className="w-9 flex-shrink-0" />
           ) : (
-            <div className="min-w-0 overflow-hidden">
-              <WhoISOLogo inverse className="w-36" />
-              {currentCompany && (
-                <p className="mt-1 text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  {currentCompany.name}
-                </p>
-              )}
-            </div>
+            <WhoISOLogo inverse className="w-36" />
           )}
         </div>
 

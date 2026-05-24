@@ -52,6 +52,15 @@ export function WhoISOLogo({
         d="M45 15 L75 25 V55 C75 75 45 90 45 90 C45 90 15 75 15 55 V25 Z"
         fill={`url(#${shieldGradientId})`}
       />
+      <line
+        x1="61"
+        y1="56"
+        x2="70"
+        y2="65"
+        stroke={`url(#${accentGradientId})`}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
       <circle
         cx="50"
         cy="45"
@@ -59,15 +68,6 @@ export function WhoISOLogo({
         fill="none"
         stroke={`url(#${accentGradientId})`}
         strokeWidth="4"
-      />
-      <line
-        x1="58"
-        y1="53"
-        x2="70"
-        y2="65"
-        stroke={`url(#${accentGradientId})`}
-        strokeWidth="5"
-        strokeLinecap="round"
       />
       {!markOnly && (
         <>
