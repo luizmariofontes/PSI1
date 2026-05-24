@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { AuditLog, AuditRecord, Company, ControlResponse, DashboardMode, ViewMode } from './types'
+import { AuditLog, AuditRecord, AuthActionResult, AuthChallenge, Company, ControlResponse, DashboardMode, ViewMode } from './types'
 import { getTodayDateString } from './audit-utils'
 
 const API_URL = process.env.NEXT_PUBLIC_WHOISO_API_URL || 'http://127.0.0.1:8090'
@@ -22,8 +22,9 @@ interface AppState {
 }
 
 interface AppContextType extends AppState {
-  login: (email: string, password: string) => Promise<boolean>
-  signup: (companyName: string, email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<AuthActionResult>
+  signup: (companyName: string, email: string, password: string) => Promise<AuthActionResult>
+  verifyOTP: (challengeId: string, code: string) => Promise<AuthActionResult>
   updateAccount: (data: {
     companyName: string
     email: string
@@ -126,6 +127,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return audits
   }
 
+  const applyAuthResponse = async (data: {
+    token: string
+    user: { id: string; companyName: string; email: string; createdAt: string }
+  }) => {
+    setToken(data.token)
+    const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+    setState(prev => ({
+      ...prev,
+      currentCompany: toCompany(data.user),
+      audits: audits.map(normalizeAudit),
+      currentView: 'dashboard',
+    }))
+  }
+
   useEffect(() => {
     const token = getToken()
     if (!token) {
@@ -163,46 +178,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const login: AppContextType['login'] = async (email, password) => {
     try {
-      const data = await apiRequest<{
-        token: string
-        user: { id: string; companyName: string; email: string; createdAt: string }
-      }>('/api/whoiso/auth/login', {
+      const challenge = await apiRequest<AuthChallenge>('/api/whoiso/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       })
-      setToken(data.token)
-      const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
-      setState(prev => ({
-        ...prev,
-        currentCompany: toCompany(data.user),
-        audits: audits.map(normalizeAudit),
-        currentView: 'dashboard',
-      }))
-      return true
-    } catch {
-      return false
+      return { success: true, challenge }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Credenciais nao encontradas.',
+      }
     }
   }
 
   const signup: AppContextType['signup'] = async (companyName, email, password) => {
     try {
-      const data = await apiRequest<{
-        token: string
-        user: { id: string; companyName: string; email: string; createdAt: string }
-      }>('/api/whoiso/auth/signup', {
+      const challenge = await apiRequest<AuthChallenge>('/api/whoiso/auth/signup', {
         method: 'POST',
         body: JSON.stringify({ companyName, email, password }),
       })
-      setToken(data.token)
-      setState(prev => ({
-        ...prev,
-        currentCompany: toCompany(data.user),
-        audits: [],
-        currentView: 'dashboard',
-      }))
-      return true
-    } catch {
-      return false
+      return { success: true, challenge }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Este email ja existe.',
+      }
+    }
+  }
+
+  const verifyOTP: AppContextType['verifyOTP'] = async (challengeId, code) => {
+    try {
+      const data = await apiRequest<{
+        token: string
+        user: { id: string; companyName: string; email: string; createdAt: string }
+      }>('/api/whoiso/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ challengeId, code }),
+      })
+      await applyAuthResponse(data)
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Codigo invalido.',
+      }
     }
   }
 
@@ -379,6 +398,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...state,
         login,
         signup,
+        verifyOTP,
         updateAccount,
         logout,
         selectModule,

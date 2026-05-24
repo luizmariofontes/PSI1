@@ -46,6 +46,19 @@ export interface AuditLog {
   createdAt: string
 }
 
+export interface AuthChallenge {
+  challengeId: string
+  email: string
+  purpose: 'signup' | 'login'
+  message: string
+}
+
+export interface AuthActionResult {
+  success: boolean
+  challenge?: AuthChallenge
+  error?: string
+}
+
 export interface AuditStats {
   total: number
   conforme: number

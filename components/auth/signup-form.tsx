@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WhoISOLogo } from "@/components/brand/whoiso-logo";
+import { AuthChallenge } from "@/lib/types";
+import { OTPVerificationForm } from "./otp-verification-form";
 
 export function SignupForm() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export function SignupForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [challenge, setChallenge] = useState<AuthChallenge | null>(null);
 
   useEffect(() => {
     if (!isInitializing && currentCompany) {
@@ -47,15 +50,15 @@ export function SignupForm() {
     }
 
     setLoading(true);
-    const created = await signup(companyName, email, password);
+    const result = await signup(companyName, email, password);
     setLoading(false);
 
-    if (!created) {
-      setError("Este email ja existe.");
+    if (!result.success || !result.challenge) {
+      setError(result.error || "Este email ja existe.");
       return;
     }
 
-    router.push("/");
+    setChallenge(result.challenge);
   };
 
   return (
@@ -64,6 +67,14 @@ export function SignupForm() {
         <div className="w-full max-w-md">
           <WhoISOLogo className="mb-10 w-48" />
 
+          {challenge ? (
+            <OTPVerificationForm
+              challenge={challenge}
+              onBack={() => setChallenge(null)}
+              onVerified={() => router.push("/")}
+            />
+          ) : (
+          <>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">
             Cadastro
           </p>
@@ -153,6 +164,8 @@ export function SignupForm() {
               Entrar
             </Link>
           </p>
+          </>
+          )}
         </div>
       </section>
 

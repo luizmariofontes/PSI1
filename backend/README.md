@@ -13,6 +13,13 @@ go mod tidy
 go run . serve --http=127.0.0.1:8090
 ```
 
+Configure `backend/.env`:
+
+```env
+RESEND_API_KEY=...
+OTP_HASH_SECRET=uma-string-longa-opcional
+```
+
 O painel administrativo do PocketBase fica em:
 
 ```text
@@ -46,7 +53,30 @@ Content-Type: application/json
 }
 ```
 
-Ambos retornam:
+Signup e login retornam um desafio de MFA por email:
+
+```json
+{
+  "challengeId": "...",
+  "email": "voce@empresa.com",
+  "purpose": "signup",
+  "message": "Enviamos um codigo de 6 digitos para o email informado."
+}
+```
+
+Depois valide o código:
+
+```http
+POST /api/whoiso/auth/verify
+Content-Type: application/json
+
+{
+  "challengeId": "...",
+  "code": "123456"
+}
+```
+
+A verificação retorna:
 
 ```json
 {

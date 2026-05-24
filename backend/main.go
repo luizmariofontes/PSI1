@@ -1,11 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"html"
+	"io"
 	"log"
+	"math/big"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -38,6 +45,11 @@ type accountRequest struct {
 	NewPassword     string `json:"newPassword"`
 }
 
+type verifyOTPRequest struct {
+	ChallengeID string `json:"challengeId"`
+	Code        string `json:"code"`
+}
+
 type auditRequest struct {
 	Module    string        `json:"module"`
 	AuditDate string        `json:"auditDate"`
@@ -54,6 +66,13 @@ type authUserResponse struct {
 type authResponse struct {
 	Token string           `json:"token"`
 	User  authUserResponse `json:"user"`
+}
+
+type authChallengeResponse struct {
+	ChallengeID string `json:"challengeId"`
+	Email       string `json:"email"`
+	Purpose     string `json:"purpose"`
+	Message     string `json:"message"`
 }
 
 type auditResponse struct {
@@ -81,6 +100,8 @@ type auditLogResponse struct {
 }
 
 func main() {
+	loadEnvFile()
+
 	app := pocketbase.New()
 
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
@@ -93,6 +114,7 @@ func main() {
 		group := se.Router.Group("/api/whoiso")
 		group.POST("/auth/signup", handleSignup)
 		group.POST("/auth/login", handleLogin)
+		group.POST("/auth/verify", handleVerifyOTP)
 		group.GET("/me", handleMe).Bind(apis.RequireAuth("users"))
 		group.PATCH("/account", handleUpdateAccount).Bind(apis.RequireAuth("users"))
 		group.GET("/audits", handleListAudits).Bind(apis.RequireAuth("users"))
@@ -158,19 +180,20 @@ func handleSignup(e *core.RequestEvent) error {
 	record := core.NewRecord(collection)
 	record.SetEmail(data.Email)
 	record.SetPassword(data.Password)
-	record.SetVerified(true)
+	record.SetVerified(false)
 	record.Set("companyName", data.CompanyName)
 
 	if err := e.App.Save(record); err != nil {
 		return e.BadRequestError("Nao foi possivel criar o usuario.", err)
 	}
 
-	token, err := record.NewAuthToken()
+	challenge, err := issueOTP(e, record, "signup")
 	if err != nil {
-		return e.InternalServerError("Nao foi possivel autenticar o usuario.", err)
+		_ = e.App.Delete(record)
+		return e.InternalServerError("Nao foi possivel enviar o codigo de verificacao.", err)
 	}
 
-	return e.JSON(http.StatusCreated, authResponse{Token: token, User: newAuthUserResponse(record)})
+	return e.JSON(http.StatusAccepted, challenge)
 }
 
 func handleLogin(e *core.RequestEvent) error {
@@ -190,16 +213,288 @@ func handleLogin(e *core.RequestEvent) error {
 		return e.UnauthorizedError("Credenciais invalidas.", err)
 	}
 
-	token, err := record.NewAuthToken()
+	purpose := "login"
+	if !record.Verified() {
+		purpose = "signup"
+	}
+
+	challenge, err := issueOTP(e, record, purpose)
+	if err != nil {
+		return e.InternalServerError("Nao foi possivel enviar o codigo de verificacao.", err)
+	}
+
+	return e.JSON(http.StatusAccepted, challenge)
+}
+
+func handleVerifyOTP(e *core.RequestEvent) error {
+	var req verifyOTPRequest
+	if err := e.BindBody(&req); err != nil {
+		return e.BadRequestError("Dados invalidos.", err)
+	}
+
+	code := strings.TrimSpace(req.Code)
+	if len(code) != 6 || req.ChallengeID == "" {
+		return e.BadRequestError("Codigo invalido.", nil)
+	}
+
+	otp, err := e.App.FindRecordById("auth_otps", req.ChallengeID)
+	if err != nil {
+		return e.BadRequestError("Codigo invalido ou expirado.", err)
+	}
+
+	if otp.GetString("usedAt") != "" || otp.GetInt("attempts") >= 5 {
+		return e.BadRequestError("Codigo invalido ou expirado.", nil)
+	}
+
+	expiresAt, err := time.Parse(time.RFC3339, otp.GetString("expiresAt"))
+	if err != nil || time.Now().UTC().After(expiresAt) {
+		return e.BadRequestError("Codigo expirado.", err)
+	}
+
+	if hashOTP(code, otp.Id, otp.GetString("email"), otp.GetString("purpose")) != otp.GetString("codeHash") {
+		otp.Set("attempts", otp.GetInt("attempts")+1)
+		_ = e.App.Save(otp)
+		return e.BadRequestError("Codigo invalido.", nil)
+	}
+
+	user, err := e.App.FindRecordById("users", otp.GetString("user"))
+	if err != nil {
+		return e.BadRequestError("Usuario nao encontrado.", err)
+	}
+
+	otp.Set("usedAt", time.Now().UTC().Format(time.RFC3339))
+	if err := e.App.Save(otp); err != nil {
+		return e.InternalServerError("Nao foi possivel validar o codigo.", err)
+	}
+
+	if otp.GetString("purpose") == "signup" && !user.Verified() {
+		user.SetVerified(true)
+		if err := e.App.Save(user); err != nil {
+			return e.InternalServerError("Nao foi possivel verificar o email.", err)
+		}
+	}
+
+	token, err := user.NewAuthToken()
 	if err != nil {
 		return e.InternalServerError("Nao foi possivel autenticar o usuario.", err)
 	}
 
-	return e.JSON(http.StatusOK, authResponse{Token: token, User: newAuthUserResponse(record)})
+	return e.JSON(http.StatusOK, authResponse{Token: token, User: newAuthUserResponse(user)})
 }
 
 func handleMe(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, newAuthUserResponse(e.Auth))
+}
+
+func issueOTP(e *core.RequestEvent, user *core.Record, purpose string) (authChallengeResponse, error) {
+	code, err := generateOTPCode()
+	if err != nil {
+		return authChallengeResponse{}, err
+	}
+
+	if err := invalidateOpenOTPs(e, user.Id, purpose); err != nil {
+		return authChallengeResponse{}, err
+	}
+
+	collection, err := e.App.FindCollectionByNameOrId("auth_otps")
+	if err != nil {
+		return authChallengeResponse{}, err
+	}
+
+	expiresAt := time.Now().UTC().Add(10 * time.Minute).Format(time.RFC3339)
+	otp := core.NewRecord(collection)
+	otp.Set("user", user.Id)
+	otp.Set("email", user.Email())
+	otp.Set("purpose", purpose)
+	otp.Set("expiresAt", expiresAt)
+	otp.Set("attempts", 0)
+
+	if err := e.App.Save(otp); err != nil {
+		return authChallengeResponse{}, err
+	}
+
+	otp.Set("codeHash", hashOTP(code, otp.Id, user.Email(), purpose))
+	if err := e.App.Save(otp); err != nil {
+		return authChallengeResponse{}, err
+	}
+
+	if err := sendOTPEmail(user.Email(), user.GetString("companyName"), purpose, code); err != nil {
+		otp.Set("usedAt", time.Now().UTC().Format(time.RFC3339))
+		_ = e.App.Save(otp)
+		return authChallengeResponse{}, err
+	}
+
+	return authChallengeResponse{
+		ChallengeID: otp.Id,
+		Email:       user.Email(),
+		Purpose:     purpose,
+		Message:     "Enviamos um codigo de 6 digitos para o email informado.",
+	}, nil
+}
+
+func invalidateOpenOTPs(e *core.RequestEvent, userID string, purpose string) error {
+	records, err := e.App.FindRecordsByFilter(
+		"auth_otps",
+		"user = {:user} && purpose = {:purpose} && usedAt = ''",
+		"",
+		0,
+		0,
+		dbx.Params{"user": userID, "purpose": purpose},
+	)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	for _, record := range records {
+		record.Set("usedAt", now)
+		if err := e.App.Save(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func generateOTPCode() (string, error) {
+	max := big.NewInt(1000000)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", n.Int64()), nil
+}
+
+func hashOTP(code string, challengeID string, email string, purpose string) string {
+	pepper := os.Getenv("OTP_HASH_SECRET")
+	if pepper == "" {
+		pepper = os.Getenv("RESEND_API_KEY")
+	}
+	sum := sha256.Sum256([]byte(code + "." + challengeID + "." + strings.ToLower(email) + "." + purpose + "." + pepper))
+	return hex.EncodeToString(sum[:])
+}
+
+func sendOTPEmail(to string, companyName string, purpose string, code string) error {
+	apiKey := os.Getenv("RESEND_API_KEY")
+	if apiKey == "" {
+		return fmt.Errorf("RESEND_API_KEY nao configurada")
+	}
+
+	subject := "Seu codigo WhoISO"
+	if purpose == "signup" {
+		subject = "Confirme seu email no WhoISO"
+	}
+
+	body := map[string]any{
+		"from":    "WhoISO <notreply@whoiso.lsx.li>",
+		"to":      []string{to},
+		"subject": subject,
+		"html":    otpEmailHTML(companyName, purpose, code),
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "https://api.resend.com/emails", bytes.NewReader(raw))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		data, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return fmt.Errorf("resend status %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+
+	return nil
+}
+
+func otpEmailHTML(companyName string, purpose string, code string) string {
+	title := "Codigo de acesso"
+	description := "Use o codigo abaixo para acessar sua conta WhoISO."
+	if purpose == "signup" {
+		title = "Confirme seu email"
+		description = "Use o codigo abaixo para concluir seu cadastro no WhoISO."
+	}
+
+	return fmt.Sprintf(`<!doctype html>
+<html>
+  <body style="margin:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:32px;">
+            <tr>
+              <td>
+				<div style="margin-bottom:28px;">
+				  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 100" width="210" height="60" aria-label="WhoISO" role="img" style="display:block;">
+				    <defs>
+				      <linearGradient id="emailShield" x1="0%%" y1="0%%" x2="100%%" y2="100%%">
+				        <stop offset="0%%" stop-color="#0f172a" stop-opacity="1"></stop>
+				        <stop offset="100%%" stop-color="#334155" stop-opacity="1"></stop>
+				      </linearGradient>
+				      <linearGradient id="emailAccent" x1="0%%" y1="0%%" x2="100%%" y2="100%%">
+				        <stop offset="0%%" stop-color="#3b82f6" stop-opacity="1"></stop>
+				        <stop offset="100%%" stop-color="#06b6d4" stop-opacity="1"></stop>
+				      </linearGradient>
+				    </defs>
+				    <path d="M45 15 L75 25 V55 C75 75 45 90 45 90 C45 90 15 75 15 55 V25 Z" fill="url(#emailShield)"></path>
+				    <line x1="61" y1="56" x2="70" y2="65" stroke="url(#emailAccent)" stroke-width="5" stroke-linecap="round"></line>
+				    <circle cx="50" cy="45" r="14" fill="none" stroke="url(#emailAccent)" stroke-width="4"></circle>
+				    <text x="100" y="65" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="44" fill="#0f172a" letter-spacing="-1">Who<tspan fill="#38bdf8">ISO</tspan></text>
+				    <text x="104" y="85" font-family="Arial,Helvetica,sans-serif" font-weight="500" font-size="12" fill="#64748b" letter-spacing="2">AUDITORIA LTDA</text>
+				  </svg>
+				</div>
+                <h1 style="font-size:26px;line-height:1.2;margin:0 0 10px;color:#0f172a;">%s</h1>
+                <p style="font-size:15px;line-height:1.6;margin:0 0 24px;color:#475569;">%s</p>
+                <div style="border:1px solid #dbeafe;background:#eff6ff;border-radius:16px;padding:24px;text-align:center;">
+                  <div style="font-size:13px;text-transform:uppercase;letter-spacing:2px;color:#2563eb;margin-bottom:10px;">Codigo de 6 digitos</div>
+                  <div style="font-size:42px;letter-spacing:10px;font-weight:800;color:#0f172a;">%s</div>
+                </div>
+                <p style="font-size:13px;line-height:1.6;margin:24px 0 0;color:#64748b;">Este codigo expira em 10 minutos. Se voce nao solicitou este acesso, ignore este email.</p>
+                <p style="font-size:12px;line-height:1.6;margin:20px 0 0;color:#94a3b8;">Empresa: %s</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`, html.EscapeString(title), html.EscapeString(description), html.EscapeString(code), html.EscapeString(companyName))
+}
+
+func loadEnvFile() {
+	for _, filename := range []string{".env", "backend/.env"} {
+		content, err := os.ReadFile(filename)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(content), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			key, value, ok := strings.Cut(line, "=")
+			if !ok {
+				continue
+			}
+			key = strings.TrimSpace(key)
+			value = strings.Trim(strings.TrimSpace(value), `"'`)
+			if key != "" && os.Getenv(key) == "" {
+				_ = os.Setenv(key, value)
+			}
+		}
+		return
+	}
 }
 
 func handleUpdateAccount(e *core.RequestEvent) error {

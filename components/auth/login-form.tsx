@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { WhoISOLogo } from '@/components/brand/whoiso-logo'
+import { AuthChallenge } from '@/lib/types'
+import { OTPVerificationForm } from './otp-verification-form'
 
 export function LoginForm() {
   const router = useRouter()
@@ -17,6 +19,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [challenge, setChallenge] = useState<AuthChallenge | null>(null)
 
   useEffect(() => {
     if (!isInitializing && currentCompany) {
@@ -41,15 +44,15 @@ export function LoginForm() {
     }
 
     setLoading(true)
-    const loggedIn = await login(email, password)
+    const result = await login(email, password)
     setLoading(false)
 
-    if (!loggedIn) {
-      setError('Credenciais não encontradas.')
+    if (!result.success || !result.challenge) {
+      setError(result.error || 'Credenciais não encontradas.')
       return
     }
 
-    router.push('/')
+    setChallenge(result.challenge)
   }
 
   return (
@@ -77,6 +80,14 @@ export function LoginForm() {
             <WhoISOLogo className="w-48" />
           </div>
 
+          {challenge ? (
+            <OTPVerificationForm
+              challenge={challenge}
+              onBack={() => setChallenge(null)}
+              onVerified={() => router.push('/')}
+            />
+          ) : (
+          <>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">Login</p>
           <h2 className="mt-3 text-4xl font-bold text-slate-900">Bem-vindo de volta</h2>
           <p className="mt-3 text-base text-slate-500">
@@ -137,6 +148,8 @@ export function LoginForm() {
               Criar cadastro
             </Link>
           </p>
+          </>
+          )}
         </div>
       </section>
     </div>
