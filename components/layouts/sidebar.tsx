@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/lib/app-context'
 import { ViewMode } from '@/lib/types'
+import { getTodayDateString } from '@/lib/audit-utils'
+import { StartAuditConfirmDialog } from '@/components/audit/start-audit-confirm-dialog'
 
 // ── ItsHover Animated SVG Icons ──────────────────────────────────────────────
 
@@ -271,6 +273,8 @@ export function Sidebar() {
   } = useApp()
 
   const [collapsed, setCollapsed] = useState(false)
+  const [pendingModule, setPendingModule] = useState<'iso27001' | 'iso27701' | null>(null)
+  const [pendingAuditDate, setPendingAuditDate] = useState(getTodayDateString())
 
   const navigate = (view: ViewMode) => {
     if (currentModule && currentView === 'audit') {
@@ -279,9 +283,17 @@ export function Sidebar() {
     setView(view)
   }
 
-  const handleStartAudit = (module: 'iso27001' | 'iso27701') => {
-    selectModule(module)
+  const requestStartAudit = (module: 'iso27001' | 'iso27701') => {
+    setPendingAuditDate(getTodayDateString())
+    setPendingModule(module)
+  }
+
+  const handleStartAudit = () => {
+    if (!pendingModule) return
+
+    selectModule(pendingModule)
     setView('audit')
+    setPendingModule(null)
   }
 
   const handleLogout = () => {
@@ -397,7 +409,7 @@ export function Sidebar() {
             label="ISO 27001 / 27002"
             active={currentView === 'audit' && currentModule === 'iso27001'}
             collapsed={collapsed}
-            onClick={() => handleStartAudit('iso27001')}
+            onClick={() => requestStartAudit('iso27001')}
             accent="#10b981"
           />
           <NavItem
@@ -405,7 +417,7 @@ export function Sidebar() {
             label="ISO 27701"
             active={currentView === 'audit' && currentModule === 'iso27701'}
             collapsed={collapsed}
-            onClick={() => handleStartAudit('iso27701')}
+            onClick={() => requestStartAudit('iso27701')}
             accent="#f59e0b"
           />
         </div>
@@ -424,6 +436,16 @@ export function Sidebar() {
           accent="#ef4444"
         />
       </div>
+
+      <StartAuditConfirmDialog
+        open={pendingModule !== null}
+        module={pendingModule}
+        auditDate={pendingAuditDate}
+        onOpenChange={(open) => {
+          if (!open) setPendingModule(null)
+        }}
+        onConfirm={handleStartAudit}
+      />
     </aside>
   )
 }

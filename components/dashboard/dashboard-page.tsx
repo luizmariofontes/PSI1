@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useApp } from '@/lib/app-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,10 +10,11 @@ import { StatsChart } from './stats-chart'
 import { CategoryChart } from './category-chart'
 import { ComparativeChart } from './comparative-chart'
 import { StatsCards } from './stats-cards'
-import { calculateStats, calculateCategoryStats, formatDate } from '@/lib/audit-utils'
+import { calculateStats, calculateCategoryStats, formatAuditNumber, formatDate, getTodayDateString } from '@/lib/audit-utils'
 import { iso27002Controls } from '@/lib/data/iso27002-controls'
 import { iso27701Controls } from '@/lib/data/iso27701-controls'
 import { Shield, Lock, ArrowRight, BarChart3, TrendingUp, History, Plus } from 'lucide-react'
+import { StartAuditConfirmDialog } from '@/components/audit/start-audit-confirm-dialog'
 
 // ── Module Shortcut Card ─────────────────────────────────────────────────────
 
@@ -85,6 +86,9 @@ export function DashboardPage() {
     currentCompany,
   } = useApp()
 
+  const [pendingModule, setPendingModule] = useState<'iso27001' | 'iso27701' | null>(null)
+  const [pendingAuditDate, setPendingAuditDate] = useState(getTodayDateString())
+
   const allAudits = getCompanyAudits()
   const iso27001Audits = getCompanyAudits('iso27001')
   const iso27701Audits = getCompanyAudits('iso27701')
@@ -92,9 +96,17 @@ export function DashboardPage() {
 
   const selectedAudit = selectedAuditId ? getAuditById(selectedAuditId) : null
 
-  const handleStartAudit = (module: 'iso27001' | 'iso27701') => {
-    selectModule(module)
+  const requestStartAudit = (module: 'iso27001' | 'iso27701') => {
+    setPendingAuditDate(getTodayDateString())
+    setPendingModule(module)
+  }
+
+  const handleStartAudit = () => {
+    if (!pendingModule) return
+
+    selectModule(pendingModule)
     setView('audit')
+    setPendingModule(null)
   }
 
   // Stats for selected / combined view
@@ -208,7 +220,7 @@ export function DashboardPage() {
               description="Diagnóstico de conformidade com os controles da ISO 27002 para sistemas de gestão de segurança da informação."
               accentColor="#10b981"
               accentBg="#10b98115"
-              onNewAudit={() => handleStartAudit('iso27001')}
+              onNewAudit={() => requestStartAudit('iso27001')}
             />
             <ModuleCard
               icon={<Lock className="h-5 w-5" />}
@@ -217,7 +229,7 @@ export function DashboardPage() {
               description="Diagnóstico de conformidade com os controles de privacidade para proteção de dados pessoais (DP)."
               accentColor="#f59e0b"
               accentBg="#f59e0b15"
-              onNewAudit={() => handleStartAudit('iso27701')}
+              onNewAudit={() => requestStartAudit('iso27701')}
             />
           </div>
         </div>
@@ -248,7 +260,7 @@ export function DashboardPage() {
                       </SelectItem>
                       {allAudits.map(audit => (
                         <SelectItem key={audit.id} value={audit.id}>
-                          {audit.module === 'iso27001' ? 'ISO 27001' : 'ISO 27701'} — {formatDate(audit.auditDate)}
+                          {formatAuditNumber(audit.auditNumber)} — {audit.module === 'iso27001' ? 'ISO 27001' : 'ISO 27701'} — {formatDate(audit.auditDate)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -374,6 +386,16 @@ export function DashboardPage() {
         )}
 
       </div>
+
+      <StartAuditConfirmDialog
+        open={pendingModule !== null}
+        module={pendingModule}
+        auditDate={pendingAuditDate}
+        onOpenChange={(open) => {
+          if (!open) setPendingModule(null)
+        }}
+        onConfirm={handleStartAudit}
+      />
     </div>
   )
 }

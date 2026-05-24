@@ -3,14 +3,11 @@
 import { useApp } from '@/lib/app-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatDate, calculateStats, getStatusColor, getStatusLabel } from '@/lib/audit-utils'
+import { formatAuditNumber, formatDate, calculateStats, getStatusColor } from '@/lib/audit-utils'
 import { iso27002Controls } from '@/lib/data/iso27002-controls'
 import { iso27701Controls } from '@/lib/data/iso27701-controls'
-import { Shield, Lock, BarChart3, Eye } from 'lucide-react'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { useState } from 'react'
+import { Shield, Lock, BarChart3, Eye, Pencil } from 'lucide-react'
 
 export function HistoryPage() {
   const {
@@ -18,9 +15,8 @@ export function HistoryPage() {
     setSelectedAuditId,
     setDashboardMode,
     setView,
+    editAudit,
   } = useApp()
-
-  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const allAudits = getCompanyAudits()
 
@@ -28,6 +24,10 @@ export function HistoryPage() {
     setSelectedAuditId(auditId)
     setDashboardMode('current')
     setView('dashboard')
+  }
+
+  const handleEditAudit = (auditId: string) => {
+    editAudit(auditId)
   }
 
   if (allAudits.length === 0) {
@@ -76,6 +76,7 @@ export function HistoryPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>ID</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Módulo</TableHead>
                 <TableHead>Conforme</TableHead>
@@ -92,6 +93,9 @@ export function HistoryPage() {
                 
                 return (
                   <TableRow key={audit.id}>
+                    <TableCell className="font-semibold text-slate-700">
+                      {formatAuditNumber(audit.auditNumber)}
+                    </TableCell>
                     <TableCell className="font-medium">
                       {formatDate(audit.auditDate)}
                     </TableCell>
@@ -135,14 +139,24 @@ export function HistoryPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewDashboard(audit.id)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Dashboard
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditAudit(audit.id)}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDashboard(audit.id)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Dashboard
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

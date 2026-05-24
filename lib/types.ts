@@ -18,6 +18,7 @@ export interface ControlResponse {
 
 export interface AuditRecord {
   id: string
+  auditNumber: number
   companyName: string
   auditDate: string
   module: 'iso27001' | 'iso27701'

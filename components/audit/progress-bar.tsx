@@ -13,61 +13,102 @@ interface ProgressBarProps {
 
 export function ProgressBar({ controls, responses, currentIndex, onControlClick }: ProgressBarProps) {
   const categories = [...new Set(controls.map(c => c.category))]
+  const answeredCount = responses.length
+  const completionPercentage = controls.length > 0 ? (answeredCount / controls.length) * 100 : 0
 
   return (
-    <div className="bg-white border-b border-slate-200 py-4">
+    <div className="bg-white border-b border-slate-200 py-3">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-slate-700">
-            Progresso da Auditoria
-          </span>
-          <span className="text-sm text-slate-500">
-            {responses.length} de {controls.length} respondidos
-          </span>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="text-sm font-semibold text-slate-800">Progresso</span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+              {answeredCount} de {controls.length} respondidos
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-slate-900" />
+              Atual
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Conforme
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              Não conforme
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-slate-400" />
+              N/A
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-slate-200" />
+              Pendente
+            </span>
+          </div>
         </div>
         
-        {/* Overall Progress Bar */}
-        <div className="w-full bg-slate-100 rounded-full h-2 mb-4">
+        <div className="mb-3 h-1.5 w-full rounded-full bg-slate-100">
           <div
-            className="bg-slate-900 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(responses.length / controls.length) * 100}%` }}
+            className="h-1.5 rounded-full bg-slate-900 transition-all duration-300"
+            style={{ width: `${completionPercentage}%` }}
           />
         </div>
 
-        {/* Category-based mini indicators */}
-        <div className="space-y-2">
-          {categories.map(category => {
-            const categoryControls = controls.filter(c => c.category === category)
-            const startIndex = controls.findIndex(c => c.category === category)
-            
-            return (
-              <div key={category} className="space-y-1">
-                <span className="text-xs text-slate-500">{category}</span>
-                <div className="flex gap-1">
-                  {categoryControls.map((control, idx) => {
-                    const globalIndex = startIndex + idx
-                    const response = responses.find(r => r.controlId === control.id)
-                    const status = response?.status || 'pendente'
-                    const isCurrent = globalIndex === currentIndex
-                    
-                    return (
-                      <button
-                        key={control.id}
-                        onClick={() => onControlClick(globalIndex)}
-                        className={cn(
-                          'h-2 flex-1 rounded-sm transition-all',
-                          getStatusColor(status),
-                          isCurrent && 'ring-2 ring-slate-900 ring-offset-1',
-                          status === 'pendente' && 'bg-slate-200 hover:bg-slate-300'
-                        )}
-                        title={`${control.code} - ${control.title} (${getStatusLabel(status)})`}
-                      />
-                    )
-                  })}
+        <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max gap-4">
+            {categories.map(category => {
+              const categoryControls = controls.filter(c => c.category === category)
+              const startIndex = controls.findIndex(c => c.category === category)
+              const answeredInCategory = categoryControls.filter(control =>
+                responses.some(response => response.controlId === control.id),
+              ).length
+
+              return (
+                <div
+                  key={category}
+                  className="min-w-[320px] space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-2"
+                  style={{ width: Math.max(320, categoryControls.length * 44 + 32) }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onControlClick(startIndex)}
+                    className="flex max-w-full items-center gap-2 text-left text-xs font-medium text-slate-500 hover:text-slate-900"
+                    title={category}
+                  >
+                    <span className="truncate">{category}</span>
+                    <span className="shrink-0 text-slate-400">
+                      {answeredInCategory}/{categoryControls.length}
+                    </span>
+                  </button>
+                  <div className="flex gap-3">
+                    {categoryControls.map((control, idx) => {
+                      const globalIndex = startIndex + idx
+                      const response = responses.find(r => r.controlId === control.id)
+                      const status = response?.status || 'pendente'
+                      const isCurrent = globalIndex === currentIndex
+
+                      return (
+                        <button
+                          key={control.id}
+                          onClick={() => onControlClick(globalIndex)}
+                          className={cn(
+                            'relative h-3.5 w-8 shrink-0 rounded-full transition-all',
+                            getStatusColor(status),
+                            isCurrent && 'z-10 ring-2 ring-slate-900 ring-offset-2',
+                            status === 'pendente' && 'bg-slate-200 hover:bg-slate-300',
+                          )}
+                          title={`${control.code} - ${control.title} (${getStatusLabel(status)})`}
+                        />
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

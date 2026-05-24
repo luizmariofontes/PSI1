@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { AuditRecord, Company, ControlResponse, ViewMode, DashboardMode } from './types'
-import { generateId } from './audit-utils'
+import { generateId, getTodayDateString } from './audit-utils'
 
 interface AppState {
   // Company
@@ -13,6 +13,7 @@ interface AppState {
   currentModule: 'iso27001' | 'iso27701' | null
   currentAuditDate: string
   currentResponses: ControlResponse[]
+  editingAuditId: string | null
   audits: AuditRecord[]
   
   // Navigation
@@ -29,7 +30,7 @@ interface AppContextType extends AppState {
   
   // Audit actions
   selectModule: (module: 'iso27001' | 'iso27701') => void
-  setAuditDate: (date: string) => void
+  editAudit: (auditId: string) => boolean
   setControlResponse: (controlId: string, status: ControlResponse['status'], inProgressDetails?: string) => void
   saveAudit: () => void
   clearCurrentAudit: () => void
@@ -48,6 +49,28 @@ const AppContext = createContext<AppContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'whoiso-data'
 
+function normalizeAudits(audits: Partial<AuditRecord>[]): AuditRecord[] {
+  const nextNumberByCompany = new Map<string, number>()
+
+  return audits.map((audit, index) => {
+    const companyName = audit.companyName || 'Empresa'
+    const nextNumber = nextNumberByCompany.get(companyName) || 1
+    const auditNumber = audit.auditNumber || nextNumber
+
+    nextNumberByCompany.set(companyName, Math.max(nextNumber, auditNumber) + 1)
+
+    return {
+      id: audit.id || generateId(),
+      auditNumber,
+      companyName,
+      auditDate: audit.auditDate || getTodayDateString(),
+      module: audit.module === 'iso27701' ? 'iso27701' : 'iso27001',
+      responses: audit.responses || [],
+      createdAt: audit.createdAt || new Date(Date.now() + index).toISOString(),
+    }
+  })
+}
+
 function loadFromStorage(): Partial<AppState> {
   if (typeof window === 'undefined') return {}
   
@@ -64,6 +87,7 @@ function loadFromStorage(): Partial<AppState> {
       return {
         ...parsed,
         companies,
+        audits: normalizeAudits(parsed.audits || []),
       }
     }
   } catch (e) {
@@ -91,8 +115,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     currentCompany: null,
     companies: [],
     currentModule: null,
-    currentAuditDate: new Date().toISOString().split('T')[0],
+    currentAuditDate: getTodayDateString(),
     currentResponses: [],
+    editingAuditId: null,
     audits: [],
     currentView: 'login' as ViewMode,
     dashboardMode: 'current',
@@ -167,6 +192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentCompany: null,
       currentModule: null,
       currentResponses: [],
+      editingAuditId: null,
       currentView: 'login',
       selectedAuditId: null,
     }))
@@ -177,15 +203,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       currentModule: module,
       currentResponses: [],
-      currentAuditDate: new Date().toISOString().split('T')[0],
+      editingAuditId: null,
+      currentAuditDate: getTodayDateString(),
     }))
   }
 
-  const setAuditDate = (date: string) => {
+  const editAudit = (auditId: string) => {
+    const audit = state.audits.find(a => a.id === auditId)
+
+    if (!audit) {
+      return false
+    }
+
     setState(prev => ({
       ...prev,
-      currentAuditDate: date,
+      currentModule: audit.module,
+      currentAuditDate: audit.auditDate,
+      currentResponses: audit.responses.map(response => ({ ...response })),
+      editingAuditId: audit.id,
+      currentView: 'audit',
     }))
+
+    return true
   }
 
   const setControlResponse = (
@@ -213,9 +252,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const saveAudit = () => {
     if (!state.currentCompany || !state.currentModule) return
+
+    if (state.editingAuditId) {
+      const updatedAudit: AuditRecord = {
+        id: state.editingAuditId,
+        auditNumber: state.audits.find(a => a.id === state.editingAuditId)?.auditNumber || 1,
+        companyName: state.currentCompany.name,
+        auditDate: state.currentAuditDate,
+        module: state.currentModule,
+        responses: state.currentResponses,
+        createdAt: state.audits.find(a => a.id === state.editingAuditId)?.createdAt || new Date().toISOString(),
+      }
+
+      setState(prev => ({
+        ...prev,
+        audits: prev.audits.map(audit => audit.id === state.editingAuditId ? updatedAudit : audit),
+        currentResponses: [],
+        editingAuditId: null,
+        selectedAuditId: updatedAudit.id,
+        currentView: 'dashboard',
+      }))
+
+      return
+    }
     
     const audit: AuditRecord = {
       id: generateId(),
+      auditNumber:
+        Math.max(
+          0,
+          ...state.audits
+            .filter(audit => audit.companyName === state.currentCompany!.name)
+            .map(audit => audit.auditNumber),
+        ) + 1,
       companyName: state.currentCompany.name,
       auditDate: state.currentAuditDate,
       module: state.currentModule,
@@ -227,6 +296,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       audits: [...prev.audits, audit],
       currentResponses: [],
+      editingAuditId: null,
       selectedAuditId: audit.id,
       currentView: 'dashboard',
     }))
@@ -237,7 +307,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       currentModule: null,
       currentResponses: [],
-      currentAuditDate: new Date().toISOString().split('T')[0],
+      editingAuditId: null,
+      currentAuditDate: getTodayDateString(),
     }))
   }
 
@@ -262,7 +333,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       audits = audits.filter(a => a.module === module)
     }
     
-    return audits.sort((a, b) => new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime())
+    return audits.sort((a, b) => {
+      const dateDiff = new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime()
+      return dateDiff || b.auditNumber - a.auditNumber
+    })
   }
 
   const getAuditById = (id: string) => {
@@ -277,7 +351,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         selectModule,
-        setAuditDate,
+        editAudit,
         setControlResponse,
         saveAudit,
         clearCurrentAudit,

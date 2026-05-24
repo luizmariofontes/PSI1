@@ -60,8 +60,28 @@ export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
+export function getTodayDateString(): string {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function formatAuditNumber(auditNumber: number): string {
+  return `#${String(auditNumber).padStart(4, '0')}`
+}
+
 export function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('pt-BR', {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateString)
+    ? new Date(
+        Number(dateString.slice(0, 4)),
+        Number(dateString.slice(5, 7)) - 1,
+        Number(dateString.slice(8, 10)),
+      )
+    : new Date(dateString)
+
+  return date.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
