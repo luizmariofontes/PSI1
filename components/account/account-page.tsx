@@ -1,44 +1,46 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Building2, CheckCircle2, Lock, Mail, Settings } from 'lucide-react'
-import { useApp } from '@/lib/app-context'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { formatDate } from '@/lib/audit-utils'
+import { useEffect, useState } from "react";
+import { Building2, CheckCircle2, Lock, Mail, Settings } from "lucide-react";
+import { useApp } from "@/lib/app-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { formatDate } from "@/lib/audit-utils";
 
 export function AccountPage() {
-  const { currentCompany, getCompanyAudits, updateAccount } = useApp()
-  const [companyName, setCompanyName] = useState(currentCompany?.name || '')
-  const [email, setEmail] = useState(currentCompany?.email || '')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { currentCompany, getCompanyAudits, updateAccount } = useApp();
+  const [companyName, setCompanyName] = useState(currentCompany?.name || "");
+  const [email, setEmail] = useState(currentCompany?.email || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const audits = getCompanyAudits()
+  const audits = getCompanyAudits();
 
   useEffect(() => {
-    setCompanyName(currentCompany?.name || '')
-    setEmail(currentCompany?.email || '')
-  }, [currentCompany?.name, currentCompany?.email])
+    setCompanyName(currentCompany?.name || "");
+    setEmail(currentCompany?.email || "");
+  }, [currentCompany?.name, currentCompany?.email]);
 
   const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    setError('')
-    setSuccess('')
+    event.preventDefault();
+    setError("");
+    setSuccess("");
 
     if (newPassword || confirmPassword || currentPassword) {
       if (!newPassword || !confirmPassword || !currentPassword) {
-        setError('Preencha senha atual, nova senha e confirmação para alterar a senha.')
-        return
+        setError(
+          "Preencha senha atual, nova senha e confirmação para alterar a senha.",
+        );
+        return;
       }
 
       if (newPassword !== confirmPassword) {
-        setError('A confirmação da senha não confere.')
-        return
+        setError("A confirmação da senha não confere.");
+        return;
       }
     }
 
@@ -47,21 +49,21 @@ export function AccountPage() {
       email,
       currentPassword,
       newPassword,
-    })
+    });
 
     if (!result.success) {
-      setError(result.error || 'Não foi possível salvar as alterações.')
-      return
+      setError(result.error || "Não foi possível salvar as alterações.");
+      return;
     }
 
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmPassword('')
-    setSuccess('Dados atualizados com sucesso.')
-  }
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setSuccess("Dados atualizados com sucesso.");
+  };
 
   if (!currentCompany) {
-    return null
+    return null;
   }
 
   return (
@@ -81,7 +83,9 @@ export function AccountPage() {
             </div>
             <div>
               <h2 className="font-semibold text-slate-900">Dados de acesso</h2>
-              <p className="text-xs text-slate-500">As alterações são salvas localmente.</p>
+              <p className="text-xs text-slate-500">
+                As alterações são salvas localmente.
+              </p>
             </div>
           </div>
 
@@ -95,9 +99,9 @@ export function AccountPage() {
                     id="companyName"
                     value={companyName}
                     onChange={(event) => {
-                      setCompanyName(event.target.value)
-                      setError('')
-                      setSuccess('')
+                      setCompanyName(event.target.value);
+                      setError("");
+                      setSuccess("");
                     }}
                     className="h-12 rounded-xl pl-11"
                   />
@@ -113,9 +117,9 @@ export function AccountPage() {
                     type="email"
                     value={email}
                     onChange={(event) => {
-                      setEmail(event.target.value)
-                      setError('')
-                      setSuccess('')
+                      setEmail(event.target.value);
+                      setError("");
+                      setSuccess("");
                     }}
                     className="h-12 rounded-xl pl-11"
                   />
@@ -126,7 +130,9 @@ export function AccountPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="mb-4">
                 <h3 className="font-semibold text-slate-900">Alterar senha</h3>
-                <p className="text-xs text-slate-500">Deixe em branco para manter a senha atual.</p>
+                <p className="text-xs text-slate-500">
+                  Deixe em branco para manter a senha atual.
+                </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-3">
@@ -137,11 +143,12 @@ export function AccountPage() {
                     <Input
                       id="currentPassword"
                       type="password"
+                      placeholder="********"
                       value={currentPassword}
                       onChange={(event) => {
-                        setCurrentPassword(event.target.value)
-                        setError('')
-                        setSuccess('')
+                        setCurrentPassword(event.target.value);
+                        setError("");
+                        setSuccess("");
                       }}
                       className="h-12 rounded-xl bg-white pl-11"
                     />
@@ -153,11 +160,12 @@ export function AccountPage() {
                   <Input
                     id="newPassword"
                     type="password"
+                    placeholder="********"
                     value={newPassword}
                     onChange={(event) => {
-                      setNewPassword(event.target.value)
-                      setError('')
-                      setSuccess('')
+                      setNewPassword(event.target.value);
+                      setError("");
+                      setSuccess("");
                     }}
                     className="h-12 rounded-xl bg-white"
                   />
@@ -168,11 +176,12 @@ export function AccountPage() {
                   <Input
                     id="confirmPassword"
                     type="password"
+                    placeholder="********"
                     value={confirmPassword}
                     onChange={(event) => {
-                      setConfirmPassword(event.target.value)
-                      setError('')
-                      setSuccess('')
+                      setConfirmPassword(event.target.value);
+                      setError("");
+                      setSuccess("");
                     }}
                     className="h-12 rounded-xl bg-white"
                   />
@@ -194,7 +203,10 @@ export function AccountPage() {
             )}
 
             <div className="flex justify-end">
-              <Button type="submit" className="h-11 rounded-xl bg-blue-600 px-6 font-semibold hover:bg-blue-700">
+              <Button
+                type="submit"
+                className="h-11 rounded-xl bg-blue-600 px-6 font-semibold hover:bg-blue-700"
+              >
                 Salvar alterações
               </Button>
             </div>
@@ -203,26 +215,38 @@ export function AccountPage() {
 
         <aside className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-widest text-slate-400">Empresa</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{currentCompany.name}</p>
-            <p className="mt-1 text-sm text-slate-500">{currentCompany.email}</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
+              Empresa
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {currentCompany.name}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              {currentCompany.email}
+            </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-widest text-slate-400">Resumo</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
+              Resumo
+            </p>
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Auditorias</span>
-                <span className="font-semibold text-slate-900">{audits.length}</span>
+                <span className="font-semibold text-slate-900">
+                  {audits.length}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Cadastro</span>
-                <span className="font-semibold text-slate-900">{formatDate(currentCompany.createdAt)}</span>
+                <span className="font-semibold text-slate-900">
+                  {formatDate(currentCompany.createdAt)}
+                </span>
               </div>
             </div>
           </div>
         </aside>
       </div>
     </div>
-  )
+  );
 }

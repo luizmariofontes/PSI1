@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "WhoISO - Diagnóstico de Conformidade ISO",
+  title: "WhoISO",
   description:
     "Sistema de diagnóstico de conformidade para ISO 27001/27002 e ISO 27701",
   icons: {

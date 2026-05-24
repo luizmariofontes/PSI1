@@ -1,45 +1,45 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { Building2, CheckCircle2, Lock, Mail, ShieldCheck } from 'lucide-react'
-import { useApp } from '@/lib/app-context'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { WhoISOLogo } from '@/components/brand/whoiso-logo'
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Building2, CheckCircle2, Lock, Mail, ShieldCheck } from "lucide-react";
+import { useApp } from "@/lib/app-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { WhoISOLogo } from "@/components/brand/whoiso-logo";
 
 export function SignupForm() {
-  const router = useRouter()
-  const { signup } = useApp()
-  const [companyName, setCompanyName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const router = useRouter();
+  const { signup } = useApp();
+  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!companyName.trim() || !email.trim() || !password) {
-      setError('Preencha nome da empresa, email e senha.')
-      return
+      setError("Preencha nome da empresa, email e senha.");
+      return;
     }
 
     if (password.length < 6) {
-      setError('Use uma senha com pelo menos 6 caracteres.')
-      return
+      setError("Use uma senha com pelo menos 6 caracteres.");
+      return;
     }
 
-    const created = signup(companyName, email, password)
+    const created = signup(companyName, email, password);
 
     if (!created) {
-      setError('Este email ja existe.')
-      return
+      setError("Este email ja existe.");
+      return;
     }
 
-    router.push('/')
-  }
+    router.push("/");
+  };
 
   return (
     <div className="grid min-h-screen bg-white md:grid-cols-[0.94fr_1.06fr]">
@@ -47,10 +47,14 @@ export function SignupForm() {
         <div className="w-full max-w-md">
           <WhoISOLogo className="mb-10 w-48" />
 
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">Cadastro</p>
-          <h1 className="mt-3 text-4xl font-bold text-slate-900">Crie sua conta</h1>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">
+            Cadastro
+          </p>
+          <h1 className="mt-3 text-4xl font-bold text-slate-900">
+            Crie sua conta
+          </h1>
           <p className="mt-3 text-base text-slate-500">
-            Cadastre sua empresa para acessar o painel imediatamente.
+            Cadastre sua empresa para acessar o painel.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-9 space-y-5">
@@ -64,8 +68,8 @@ export function SignupForm() {
                   placeholder="Acme Segurança"
                   value={companyName}
                   onChange={(e) => {
-                    setCompanyName(e.target.value)
-                    setError('')
+                    setCompanyName(e.target.value);
+                    setError("");
                   }}
                   className="h-12 rounded-xl pl-11"
                 />
@@ -82,8 +86,8 @@ export function SignupForm() {
                   placeholder="voce@empresa.com"
                   value={email}
                   onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError('')
+                    setEmail(e.target.value);
+                    setError("");
                   }}
                   className="h-12 rounded-xl pl-11"
                 />
@@ -100,8 +104,8 @@ export function SignupForm() {
                   placeholder="Minimo de 6 caracteres"
                   value={password}
                   onChange={(e) => {
-                    setPassword(e.target.value)
-                    setError('')
+                    setPassword(e.target.value);
+                    setError("");
                   }}
                   className="h-12 rounded-xl pl-11"
                 />
@@ -114,14 +118,20 @@ export function SignupForm() {
               </div>
             )}
 
-            <Button type="submit" className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700">
+            <Button
+              type="submit"
+              className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700"
+            >
               Criar conta
             </Button>
           </form>
 
           <p className="mt-7 text-center text-sm text-slate-500">
-            Ja tem conta?{' '}
-            <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700">
+            Ja tem conta?{" "}
+            <Link
+              href="/login"
+              className="font-semibold text-blue-600 hover:text-blue-700"
+            >
               Entrar
             </Link>
           </p>
@@ -140,17 +150,27 @@ export function SignupForm() {
               Uma base completa para diagnosticar ISO 27001 e ISO 27701.
             </h2>
             <p className="mt-6 max-w-xl text-base leading-7 text-slate-400">
-              O cadastro cria a empresa, organiza os dados e libera a experiência completa do produto.
+              O cadastro cria a empresa, organiza os dados e libera a
+              experiência completa do produto.
             </p>
           </div>
 
           <div className="space-y-4">
             {[
-              { label: 'Dashboard com indicadores de auditoria', color: '#3b82f6' },
-              { label: 'Historico por empresa cadastrada', color: '#10b981' },
-              { label: 'Fluxos separados para seguranca e privacidade', color: '#f59e0b' },
+              {
+                label: "Dashboard com indicadores de auditoria",
+                color: "#3b82f6",
+              },
+              { label: "Historico por empresa cadastrada", color: "#10b981" },
+              {
+                label: "Fluxos separados para seguranca e privacidade",
+                color: "#f59e0b",
+              },
             ].map(({ label, color }) => (
-              <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+              <div
+                key={label}
+                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+              >
                 <CheckCircle2 className="h-5 w-5" style={{ color }} />
                 <p className="text-sm font-medium text-slate-200">{label}</p>
               </div>
@@ -159,5 +179,5 @@ export function SignupForm() {
         </div>
       </section>
     </div>
-  )
+  );
 }
