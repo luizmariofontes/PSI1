@@ -57,8 +57,8 @@ function loadFromStorage(): Partial<AppState> {
       const parsed = JSON.parse(data)
       const companies = (parsed.companies || []).map((company: Partial<Company>) => ({
         ...company,
-        email: company.email || `${company.name || 'empresa'}@mock.local`.toLowerCase().replace(/\s+/g, ''),
-        password: company.password || 'mock123',
+        email: company.email || `${company.name || 'empresa'}@local.test`.toLowerCase().replace(/\s+/g, ''),
+        password: company.password || 'whoiso123',
       }))
 
       return {

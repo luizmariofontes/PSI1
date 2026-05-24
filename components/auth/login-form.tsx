@@ -27,7 +27,7 @@ export function LoginForm() {
     const loggedIn = login(email, password)
 
     if (!loggedIn) {
-      setError('Credenciais não encontradas no mock.')
+      setError('Credenciais não encontradas.')
       return
     }
 
@@ -35,122 +35,120 @@ export function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto grid min-h-[calc(100vh-2rem)] w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm md:min-h-[calc(100vh-4rem)] md:grid-cols-[1.05fr_0.95fr]">
-        <section className="hidden flex-col justify-between bg-[#0f172a] p-10 text-white md:flex">
-          <div>
+    <div className="grid min-h-screen bg-white md:grid-cols-[1.06fr_0.94fr]">
+      <section className="hidden min-h-screen flex-col justify-between bg-[#0f172a] px-12 py-10 text-white lg:px-16 md:flex">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold">
+              W
+            </div>
+            <div>
+              <p className="text-xl font-bold leading-tight">WhoISO</p>
+              <p className="text-sm text-slate-400">Diagnóstico de conformidade</p>
+            </div>
+          </div>
+
+          <div className="mt-20 max-w-xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-indigo-300">Acesso seguro</p>
+            <h1 className="mt-4 text-5xl font-bold leading-tight tracking-normal lg:text-6xl">
+              Acompanhe a maturidade ISO da sua empresa.
+            </h1>
+            <p className="mt-6 max-w-lg text-base leading-7 text-slate-400">
+              Entre para visualizar indicadores, iniciar auditorias e revisar o histórico de conformidade em um só lugar.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'ISO 27001', icon: ShieldCheck, color: '#10b981' },
+            { label: 'Controles', icon: BarChart3, color: '#6366f1' },
+            { label: 'Privacidade', icon: Lock, color: '#f59e0b' },
+          ].map(({ label, icon: Icon, color }) => (
+            <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+              <Icon className="h-5 w-5" style={{ color }} />
+              <p className="mt-4 text-sm font-medium text-slate-300">{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="flex min-h-screen items-center justify-center px-6 py-10 md:px-10 lg:px-16">
+        <div className="w-full max-w-md">
+          <div className="mb-10 md:hidden">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-xl font-bold">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-lg font-bold text-white">
                 W
               </div>
               <div>
-                <p className="text-xl font-bold leading-tight">WhoISO</p>
-                <p className="text-sm text-slate-400">Diagnóstico de conformidade</p>
+                <p className="text-xl font-bold text-slate-900">WhoISO</p>
+                <p className="text-sm text-slate-500">Diagnóstico de conformidade</p>
               </div>
-            </div>
-
-            <div className="mt-16 max-w-md">
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-indigo-300">Acesso seguro</p>
-              <h1 className="mt-4 text-4xl font-bold leading-tight">
-                Entre para acompanhar a maturidade ISO da sua empresa.
-              </h1>
-              <p className="mt-4 text-sm leading-6 text-slate-400">
-                Ambiente mock para navegar pelo dashboard, iniciar auditorias e revisar históricos sem backend.
-              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'ISO 27001', icon: ShieldCheck, color: '#10b981' },
-              { label: 'Controles', icon: BarChart3, color: '#6366f1' },
-              { label: 'Privacidade', icon: Lock, color: '#f59e0b' },
-            ].map(({ label, icon: Icon, color }) => (
-              <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                <Icon className="h-5 w-5" style={{ color }} />
-                <p className="mt-3 text-xs font-medium text-slate-300">{label}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-500">Login</p>
+          <h2 className="mt-3 text-4xl font-bold text-slate-900">Bem-vindo de volta</h2>
+          <p className="mt-3 text-base text-slate-500">
+            Use suas credenciais cadastradas para acessar o painel.
+          </p>
 
-        <section className="flex items-center justify-center p-6 md:p-10">
-          <div className="w-full max-w-sm">
-            <div className="mb-8 md:hidden">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 text-lg font-bold text-white">
-                  W
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-slate-900">WhoISO</p>
-                  <p className="text-sm text-slate-500">Diagnóstico de conformidade</p>
-                </div>
+          <form onSubmit={handleSubmit} className="mt-9 space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="voce@empresa.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('')
+                  }}
+                  className="h-12 rounded-xl pl-11"
+                />
               </div>
             </div>
 
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-500">Login</p>
-            <h2 className="mt-3 text-3xl font-bold text-slate-900">Bem-vindo de volta</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Use as credenciais criadas no cadastro mock.
-            </p>
-
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="voce@empresa.com"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value)
-                      setError('')
-                    }}
-                    className="h-11 rounded-xl pl-10"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Sua senha"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setError('')
+                  }}
+                  className="h-12 rounded-xl pl-11"
+                />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Sua senha"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value)
-                      setError('')
-                    }}
-                    className="h-11 rounded-xl pl-10"
-                  />
-                </div>
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                {error}
               </div>
+            )}
 
-              {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                  {error}
-                </div>
-              )}
+            <Button type="submit" className="h-12 w-full rounded-xl bg-indigo-600 font-semibold hover:bg-indigo-700">
+              Entrar
+            </Button>
+          </form>
 
-              <Button type="submit" className="h-11 w-full rounded-xl bg-indigo-600 font-semibold hover:bg-indigo-700">
-                Entrar
-              </Button>
-            </form>
-
-            <p className="mt-6 text-center text-sm text-slate-500">
-              Ainda nao tem conta?{' '}
-              <Link href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700">
-                Criar cadastro
-              </Link>
-            </p>
-          </div>
-        </section>
-      </div>
+          <p className="mt-7 text-center text-sm text-slate-500">
+            Ainda nao tem conta?{' '}
+            <Link href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700">
+              Criar cadastro
+            </Link>
+          </p>
+        </div>
+      </section>
     </div>
   )
 }
