@@ -26,9 +26,9 @@ function IconBarChart({ size = 20 }: { size?: number }) {
       style={{ overflow: 'visible' }}
     >
       <style>{`
-        .itshover-barchart:hover .bar-1 { animation: bar-rise-1 0.4s ease forwards; }
-        .itshover-barchart:hover .bar-2 { animation: bar-rise-2 0.4s ease 0.08s forwards; }
-        .itshover-barchart:hover .bar-3 { animation: bar-rise-3 0.4s ease 0.16s forwards; }
+        .group:hover .bar-1, .itshover-barchart:hover .bar-1 { animation: bar-rise-1 0.4s ease forwards; }
+        .group:hover .bar-2, .itshover-barchart:hover .bar-2 { animation: bar-rise-2 0.4s ease 0.08s forwards; }
+        .group:hover .bar-3, .itshover-barchart:hover .bar-3 { animation: bar-rise-3 0.4s ease 0.16s forwards; }
         @keyframes bar-rise-1 { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.25)} }
         @keyframes bar-rise-2 { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.3)} }
         @keyframes bar-rise-3 { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.2)} }
@@ -57,8 +57,8 @@ function IconShield({ size = 20 }: { size?: number }) {
       style={{ overflow: 'visible' }}
     >
       <style>{`
-        .itshover-shield:hover .shield-body { animation: shield-pulse 0.5s ease; }
-        .itshover-shield:hover .shield-check { animation: check-draw 0.4s ease 0.15s both; }
+        .group:hover .shield-body, .itshover-shield:hover .shield-body { animation: shield-pulse 0.5s ease; }
+        .group:hover .shield-check, .itshover-shield:hover .shield-check { animation: check-draw 0.4s ease 0.15s both; }
         @keyframes shield-pulse { 0%,100%{transform:scale(1)} 40%{transform:scale(1.1)} }
         @keyframes check-draw { from{stroke-dashoffset:20} to{stroke-dashoffset:0} }
       `}</style>
@@ -85,7 +85,7 @@ function IconLock({ size = 20 }: { size?: number }) {
       style={{ overflow: 'visible' }}
     >
       <style>{`
-        .itshover-lock:hover .lock-shackle { animation: shackle-open 0.45s ease; }
+        .group:hover .lock-shackle, .itshover-lock:hover .lock-shackle { animation: shackle-open 0.45s ease; }
         @keyframes shackle-open {
           0%{transform:translateY(0)}
           40%{transform:translateY(-3px)}
@@ -116,13 +116,13 @@ function IconHistory({ size = 20 }: { size?: number }) {
       style={{ overflow: 'visible' }}
     >
       <style>{`
-        .itshover-history:hover .clock-hand { animation: tick 0.5s steps(4) forwards; }
-        .itshover-history:hover .clock-body { animation: spin-ccw 0.5s ease; }
+        .group:hover .clock-hand, .itshover-history:hover .clock-hand { animation: tick 0.5s steps(4) forwards; }
+        .group:hover .clock-body, .itshover-history:hover .clock-body { animation: spin-ccw 0.5s ease; }
         @keyframes tick { from{transform:rotate(0deg)} to{transform:rotate(90deg)} }
         @keyframes spin-ccw { 0%{transform:rotate(0deg)} 50%{transform:rotate(-15deg)} 100%{transform:rotate(0deg)} }
       `}</style>
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path className="clock-body" d="M12 8l0 4l2.5 2.5" style={{ transformOrigin: '12px 12px' }} />
+      <path className="clock-hand" d="M12 8l0 4l2.5 2.5" style={{ transformOrigin: '12px 12px' }} />
       <path className="clock-body" d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" style={{ transformOrigin: '12px 12px' }} />
     </svg>
   )
@@ -144,7 +144,7 @@ function IconSettings({ size = 20 }: { size?: number }) {
       style={{ overflow: 'visible' }}
     >
       <style>{`
-        .itshover-settings:hover .settings-gear { animation: gear-turn 0.55s ease; }
+        .group:hover .settings-gear, .itshover-settings:hover .settings-gear { animation: gear-turn 0.55s ease; }
         @keyframes gear-turn { from{transform:rotate(0deg)} to{transform:rotate(45deg)} }
       `}</style>
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -174,7 +174,7 @@ function IconLogOut({ size = 20 }: { size?: number }) {
       style={{ overflow: 'visible' }}
     >
       <style>{`
-        .itshover-logout:hover .logout-arrow { animation: slide-right 0.4s ease; }
+        .group:hover .logout-arrow, .itshover-logout:hover .logout-arrow { animation: slide-right 0.4s ease; }
         @keyframes slide-right { 0%{transform:translateX(0)} 45%{transform:translateX(5px)} 100%{transform:translateX(0)} }
       `}</style>
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -242,7 +242,7 @@ function NavItem({ icon, label, active, collapsed, onClick, accent = '#3b82f6' }
         onClick={onClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200"
+        className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200"
         style={{
           background: active
             ? `linear-gradient(135deg, ${accent}22 0%, ${accent}11 100%)`
