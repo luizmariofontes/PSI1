@@ -217,7 +217,7 @@ export function DashboardPage() {
               icon={<Shield className="h-5 w-5" />}
               title="ISO 27001 / 27002"
               subtitle="Segurança da Informação"
-              description="Diagnóstico de conformidade com os controles da ISO 27002 para sistemas de gestão de segurança da informação."
+              description="Diagnóstico de conformidade com os requisitos da ISO 27001 e controles da ISO 27002 para sistemas de gestão de segurança da informação."
               accentColor="#10b981"
               accentBg="#10b98115"
               onNewAudit={() => requestStartAudit('iso27001')}

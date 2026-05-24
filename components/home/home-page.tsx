@@ -110,7 +110,7 @@ export function HomePage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-600 mb-4">
-              Diagnóstico de conformidade com os controles da ISO 27002 para sistemas de gestão de segurança da informação.
+              Diagnóstico de conformidade com os requisitos da ISO 27001 e controles da ISO 27002 para sistemas de gestão de segurança da informação.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <Button onClick={() => requestStartAudit('iso27001')} className="flex-1">
