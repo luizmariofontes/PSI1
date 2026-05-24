@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 100">
+  <style>
+    .shield-start { stop-color: #0f172a; }
+    .shield-end { stop-color: #334155; }
+    .accent-start { stop-color: #3b82f6; }
+    .accent-end { stop-color: #06b6d4; }
+    @media (prefers-color-scheme: dark) {
+      .shield-start { stop-color: #f8fafc; }
+      .shield-end { stop-color: #cbd5e1; }
+      .accent-start { stop-color: #60a5fa; }
+      .accent-end { stop-color: #22d3ee; }
+    }
+  </style>
+  <defs>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop class="shield-start" offset="0%"/>
+      <stop class="shield-end" offset="100%"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop class="accent-start" offset="0%"/>
+      <stop class="accent-end" offset="100%"/>
+    </linearGradient>
+  </defs>
+  <path d="M45 15 L75 25 V55 C75 75 45 90 45 90 C45 90 15 75 15 55 V25 Z" fill="url(#shield)"/>
+  <line x1="61" y1="56" x2="70" y2="65" stroke="url(#accent)" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="50" cy="45" r="14" fill="none" stroke="url(#accent)" stroke-width="4"/>
+</svg>
