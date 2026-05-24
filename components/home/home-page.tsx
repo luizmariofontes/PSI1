@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { useApp } from '@/lib/app-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, Lock, BarChart3, History, ArrowRight } from 'lucide-react'
+import { StartAuditConfirmDialog } from '@/components/audit/start-audit-confirm-dialog'
+import { getTodayDateString } from '@/lib/audit-utils'
 
 export function HomePage() {
   const { 
@@ -14,13 +17,24 @@ export function HomePage() {
     setDashboardMode,
   } = useApp()
 
+  const [pendingModule, setPendingModule] = useState<'iso27001' | 'iso27701' | null>(null)
+  const [pendingAuditDate, setPendingAuditDate] = useState(getTodayDateString())
+
   const iso27001Audits = getCompanyAudits('iso27001')
   const iso27701Audits = getCompanyAudits('iso27701')
   const allAudits = getCompanyAudits()
 
-  const handleStartAudit = (module: 'iso27001' | 'iso27701') => {
-    selectModule(module)
+  const requestStartAudit = (module: 'iso27001' | 'iso27701') => {
+    setPendingAuditDate(getTodayDateString())
+    setPendingModule(module)
+  }
+
+  const handleStartAudit = () => {
+    if (!pendingModule) return
+
+    selectModule(pendingModule)
     setView('audit')
+    setPendingModule(null)
   }
 
   const handleViewDashboard = (module?: 'iso27001' | 'iso27701') => {
@@ -96,10 +110,10 @@ export function HomePage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-600 mb-4">
-              Diagnóstico de conformidade com os controles da ISO 27002 para sistemas de gestão de segurança da informação.
+              Diagnóstico de conformidade com os requisitos da ISO 27001 e controles da ISO 27002 para sistemas de gestão de segurança da informação.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={() => handleStartAudit('iso27001')} className="flex-1">
+              <Button onClick={() => requestStartAudit('iso27001')} className="flex-1">
                 Nova Auditoria
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -134,7 +148,7 @@ export function HomePage() {
               Diagnóstico de conformidade com os controles de privacidade para proteção de dados pessoais (DP).
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={() => handleStartAudit('iso27701')} className="flex-1">
+              <Button onClick={() => requestStartAudit('iso27701')} className="flex-1">
                 Nova Auditoria
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -177,6 +191,16 @@ export function HomePage() {
           </CardContent>
         </Card>
       )}
+
+      <StartAuditConfirmDialog
+        open={pendingModule !== null}
+        module={pendingModule}
+        auditDate={pendingAuditDate}
+        onOpenChange={(open) => {
+          if (!open) setPendingModule(null)
+        }}
+        onConfirm={handleStartAudit}
+      />
     </div>
   )
 }

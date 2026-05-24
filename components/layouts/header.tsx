@@ -2,12 +2,13 @@
 
 import { useApp } from '@/lib/app-context'
 import { Button } from '@/components/ui/button'
-import { LogOut, Home, BarChart3, History, FileText } from 'lucide-react'
+import { LogOut, Home, BarChart3, History } from 'lucide-react'
+import { WhoISOLogo } from '@/components/brand/whoiso-logo'
 
 export function Header() {
   const { currentCompany, logout, currentView, setView, currentModule, clearCurrentAudit } = useApp()
 
-  const handleNavigation = (view: 'home' | 'dashboard' | 'history') => {
+  const handleNavigation = (view: 'dashboard' | 'history') => {
     if (currentModule && currentView === 'audit') {
       clearCurrentAudit()
     }
@@ -20,10 +21,10 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => handleNavigation('home')}
+              onClick={() => handleNavigation('dashboard')}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
-              <h1 className="text-xl font-bold text-slate-900">WhoISO</h1>
+              <WhoISOLogo className="w-36" />
             </button>
             
             {currentCompany && (
@@ -36,9 +37,9 @@ export function Header() {
           {currentCompany && (
             <nav className="flex items-center gap-2">
               <Button
-                variant={currentView === 'home' ? 'secondary' : 'ghost'}
+                variant={currentView === 'dashboard' ? 'secondary' : 'ghost'}
                 size="sm"
-                onClick={() => handleNavigation('home')}
+                onClick={() => handleNavigation('dashboard')}
               >
                 <Home className="h-4 w-4 mr-2" />
                 Início

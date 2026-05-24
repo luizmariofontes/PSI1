@@ -1,4 +1,4 @@
-import { Control } from './types'
+import { Control } from '../types'
 
 // ISO 27002 Controls - Used for ISO 27001 Diagnosis
 export const iso27002Controls: Control[] = [

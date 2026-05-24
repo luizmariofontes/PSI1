@@ -7,19 +7,18 @@ import { iso27701Controls } from '@/lib/data/iso27701-controls'
 import { ControlCard } from './control-card'
 import { ProgressBar } from './progress-bar'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Shield, Lock, ArrowLeft, Calendar } from 'lucide-react'
 import { ControlStatus } from '@/lib/types'
+import { formatAuditNumber, formatDate } from '@/lib/audit-utils'
 
 export function AuditPage() {
   const {
     currentModule,
     currentAuditDate,
     currentResponses,
-    setAuditDate,
+    editingAuditId,
+    getAuditById,
     setControlResponse,
     saveAudit,
     clearCurrentAudit,
@@ -28,6 +27,7 @@ export function AuditPage() {
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showFinishDialog, setShowFinishDialog] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const controls = useMemo(() => {
     if (currentModule === 'iso27001') return iso27002Controls
@@ -37,6 +37,7 @@ export function AuditPage() {
 
   const currentControl = controls[currentIndex]
   const currentResponse = currentResponses.find(r => r.controlId === currentControl?.id)
+  const editingAudit = editingAuditId ? getAuditById(editingAuditId) : null
 
   const handleResponseChange = (status: ControlStatus, inProgressDetails?: string) => {
     if (currentControl) {
@@ -64,14 +65,16 @@ export function AuditPage() {
     setShowFinishDialog(true)
   }
 
-  const handleConfirmFinish = () => {
-    saveAudit()
+  const handleConfirmFinish = async () => {
+    setSaving(true)
+    await saveAudit()
+    setSaving(false)
     setShowFinishDialog(false)
   }
 
   const handleCancel = () => {
     clearCurrentAudit()
-    setView('home')
+    setView('dashboard')
   }
 
   const pendingCount = controls.length - currentResponses.length
@@ -97,7 +100,7 @@ export function AuditPage() {
   const Icon = info.icon
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-full bg-slate-50">
       {/* Module Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -111,23 +114,24 @@ export function AuditPage() {
                 <Icon className="h-5 w-5 text-slate-700" />
                 <div>
                   <h2 className="font-semibold text-slate-900">{info.title}</h2>
-                  <p className="text-xs text-slate-500">{info.subtitle}</p>
+                  <p className="text-xs text-slate-500">
+                    {editingAuditId ? `Editando auditoria - ${info.subtitle}` : info.subtitle}
+                  </p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-slate-400" />
-                <Label htmlFor="auditDate" className="text-sm text-slate-600">
-                  Data da Auditoria:
-                </Label>
-                <Input
-                  id="auditDate"
-                  type="date"
-                  value={currentAuditDate}
-                  onChange={(e) => setAuditDate(e.target.value)}
-                  className="w-40"
-                />
+                <span className="text-sm text-slate-600">Data da Auditoria:</span>
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm">
+                  {formatDate(currentAuditDate)}
+                </div>
+                {editingAudit && (
+                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+                    {formatAuditNumber(editingAudit.auditNumber)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -167,17 +171,19 @@ export function AuditPage() {
               {pendingCount > 0 ? (
                 <>
                   Você ainda tem <strong>{pendingCount}</strong> controle(s) pendente(s).
-                  Deseja finalizar mesmo assim?
+                  Deseja {editingAuditId ? 'salvar as alterações' : 'finalizar'} mesmo assim?
                 </>
               ) : (
-                'Todos os controles foram avaliados. Deseja finalizar a auditoria?'
+                editingAuditId
+                  ? 'Todos os controles foram avaliados. Deseja salvar as alterações desta auditoria?'
+                  : 'Todos os controles foram avaliados. Deseja finalizar a auditoria?'
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmFinish}>
-              Finalizar
+            <AlertDialogAction onClick={handleConfirmFinish} disabled={saving}>
+              {saving ? 'Salvando...' : editingAuditId ? 'Salvar alterações' : 'Finalizar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

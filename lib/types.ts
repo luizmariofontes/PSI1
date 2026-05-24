@@ -18,6 +18,7 @@ export interface ControlResponse {
 
 export interface AuditRecord {
   id: string
+  auditNumber: number
   companyName: string
   auditDate: string
   module: 'iso27001' | 'iso27701'
@@ -28,7 +29,34 @@ export interface AuditRecord {
 export interface Company {
   id: string
   name: string
+  email: string
   createdAt: string
+}
+
+export interface AuditLog {
+  id: string
+  auditId: string
+  action: 'created' | 'updated'
+  actorEmail: string
+  actorCompanyName: string
+  auditNumber: number
+  occurredAt: string
+  previousHash: string
+  hash: string
+  createdAt: string
+}
+
+export interface AuthChallenge {
+  challengeId: string
+  email: string
+  purpose: 'signup' | 'login'
+  message: string
+}
+
+export interface AuthActionResult {
+  success: boolean
+  challenge?: AuthChallenge
+  error?: string
 }
 
 export interface AuditStats {
@@ -48,6 +76,6 @@ export interface CategoryStats {
   stats: AuditStats
 }
 
-export type ViewMode = 'login' | 'home' | 'audit' | 'dashboard' | 'history'
+export type ViewMode = 'login' | 'dashboard' | 'audit' | 'history' | 'account' | 'auditLogs'
 
 export type DashboardMode = 'current' | 'comparative'

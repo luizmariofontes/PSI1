@@ -1,29 +1,34 @@
-'use client'
+"use client";
 
-import { useApp } from '@/lib/app-context'
-import { LoginForm } from '@/components/auth/login-form'
-import { Header } from '@/components/layout/header'
-import { HomePage } from '@/components/home/home-page'
-import { AuditPage } from '@/components/audit/audit-page'
-import { DashboardPage } from '@/components/dashboard/dashboard-page'
-import { HistoryPage } from '@/components/history/history-page'
+import { useApp } from "@/lib/app-context";
+import { LoginForm } from "@/components/auth/login-form";
+import { Sidebar } from "@/components/layouts/sidebar";
+import { AuditPage } from "@/components/audit/audit-page";
+import { DashboardPage } from "@/components/dashboard/dashboard-page";
+import { HistoryPage } from "@/components/history/history-page";
+import { AuditLogsPage } from "@/components/history/audit-logs-page";
+import { AccountPage } from "@/components/account/account-page";
 
 export function WhoISOApp() {
-  const { currentView } = useApp()
+  const { currentView } = useApp();
 
-  if (currentView === 'login') {
-    return <LoginForm />
+  if (currentView === "login") {
+    return <LoginForm />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header />
-      <main>
-        {currentView === 'home' && <HomePage />}
-        {currentView === 'audit' && <AuditPage />}
-        {currentView === 'dashboard' && <DashboardPage />}
-        {currentView === 'history' && <HistoryPage />}
+    <div className="flex h-screen overflow-hidden" style={{ background: '#f8fafc' }}>
+      <Sidebar />
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{ background: '#f8fafc' }}
+      >
+        {currentView === "dashboard" && <DashboardPage />}
+        {currentView === "audit" && <AuditPage />}
+        {currentView === "history" && <HistoryPage />}
+        {currentView === "auditLogs" && <AuditLogsPage />}
+        {currentView === "account" && <AccountPage />}
       </main>
     </div>
-  )
+  );
 }

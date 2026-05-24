@@ -33,12 +33,12 @@ export function StatsChart({ stats, title, showLegend = true }: StatsChartProps)
       {title && (
         <h4 className="text-sm font-medium text-slate-700 mb-2 text-center">{title}</h4>
       )}
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={230}>
         <PieChart>
           <Pie
             data={data}
             cx="50%"
-            cy="50%"
+            cy="42%"
             innerRadius={40}
             outerRadius={70}
             paddingAngle={2}
@@ -62,7 +62,7 @@ export function StatsChart({ stats, title, showLegend = true }: StatsChartProps)
           {showLegend && (
             <Legend 
               verticalAlign="bottom" 
-              height={36}
+              height={52}
               formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
             />
           )}

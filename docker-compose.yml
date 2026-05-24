@@ -1,0 +1,35 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_WHOISO_API_URL: ${NEXT_PUBLIC_WHOISO_API_URL:-https://whoiso.lsx.li}
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_WHOISO_API_URL: ${NEXT_PUBLIC_WHOISO_API_URL:-https://whoiso.lsx.li}
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET}
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - pocketbase_data:/app/pb_data
+      - pocketbase_public:/app/pb_public
+    expose:
+      - "8090"
+    restart: unless-stopped
+
+volumes:
+  pocketbase_data:
+  pocketbase_public:

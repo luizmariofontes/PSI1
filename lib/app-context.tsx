@@ -1,143 +1,269 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { AuditRecord, Company, ControlResponse, ViewMode, DashboardMode } from './types'
-import { generateId } from './audit-utils'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { AuditLog, AuditRecord, AuthActionResult, AuthChallenge, Company, ControlResponse, DashboardMode, ViewMode } from './types'
+import { getTodayDateString } from './audit-utils'
+
+const API_URL = process.env.NEXT_PUBLIC_WHOISO_API_URL || 'http://127.0.0.1:8090'
+const TOKEN_KEY = 'whoiso-auth-token'
 
 interface AppState {
-  // Company
   currentCompany: Company | null
-  companies: Company[]
-  
-  // Audit
   currentModule: 'iso27001' | 'iso27701' | null
   currentAuditDate: string
   currentResponses: ControlResponse[]
+  editingAuditId: string | null
   audits: AuditRecord[]
-  
-  // Navigation
+  auditLogs: AuditLog[]
   currentView: ViewMode
   dashboardMode: DashboardMode
   selectedAuditId: string | null
+  isInitializing: boolean
 }
 
 interface AppContextType extends AppState {
-  // Company actions
-  login: (companyName: string) => void
+  login: (email: string, password: string) => Promise<AuthActionResult>
+  signup: (companyName: string, email: string, password: string) => Promise<AuthActionResult>
+  verifyOTP: (challengeId: string, code: string) => Promise<AuthActionResult>
+  updateAccount: (data: {
+    companyName: string
+    email: string
+    currentPassword?: string
+    newPassword?: string
+  }) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  
-  // Audit actions
   selectModule: (module: 'iso27001' | 'iso27701') => void
-  setAuditDate: (date: string) => void
+  editAudit: (auditId: string) => boolean
   setControlResponse: (controlId: string, status: ControlResponse['status'], inProgressDetails?: string) => void
-  saveAudit: () => void
+  saveAudit: () => Promise<void>
   clearCurrentAudit: () => void
-  
-  // Navigation
   setView: (view: ViewMode) => void
   setDashboardMode: (mode: DashboardMode) => void
   setSelectedAuditId: (id: string | null) => void
-  
-  // Data
+  loadAuditLogs: (auditId: string) => Promise<boolean>
   getCompanyAudits: (module?: 'iso27001' | 'iso27701') => AuditRecord[]
   getAuditById: (id: string) => AuditRecord | undefined
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-const STORAGE_KEY = 'whoiso-data'
-
-function loadFromStorage(): Partial<AppState> {
-  if (typeof window === 'undefined') return {}
-  
-  try {
-    const data = localStorage.getItem(STORAGE_KEY)
-    if (data) {
-      return JSON.parse(data)
-    }
-  } catch (e) {
-    console.error('Error loading from storage:', e)
-  }
-  return {}
+function getToken() {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(TOKEN_KEY) || ''
 }
 
-function saveToStorage(state: Partial<AppState>) {
+function setToken(token: string) {
   if (typeof window === 'undefined') return
-  
-  try {
-    const dataToSave = {
-      companies: state.companies,
-      audits: state.audits,
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+function clearToken() {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken()
+  const headers = new Headers(options.headers)
+  headers.set('Content-Type', 'application/json')
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  })
+
+  if (!response.ok) {
+    let message = 'Nao foi possivel completar a operacao.'
+    try {
+      const data = await response.json()
+      message = data.message || message
+    } catch {
+      // keep fallback message
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-  } catch (e) {
-    console.error('Error saving to storage:', e)
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+function toCompany(user: { id: string; companyName: string; email: string; createdAt: string }): Company {
+  return {
+    id: user.id,
+    name: user.companyName,
+    email: user.email,
+    createdAt: user.createdAt,
+  }
+}
+
+function normalizeAudit(audit: AuditRecord): AuditRecord {
+  return {
+    ...audit,
+    module: audit.module === 'iso27701' ? 'iso27701' : 'iso27001',
+    responses: audit.responses || [],
   }
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>({
     currentCompany: null,
-    companies: [],
     currentModule: null,
-    currentAuditDate: new Date().toISOString().split('T')[0],
+    currentAuditDate: getTodayDateString(),
     currentResponses: [],
+    editingAuditId: null,
     audits: [],
+    auditLogs: [],
     currentView: 'login',
     dashboardMode: 'current',
     selectedAuditId: null,
+    isInitializing: true,
   })
 
-  // Load data from localStorage on mount
+  const loadAudits = async () => {
+    const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+    setState(prev => ({ ...prev, audits: audits.map(normalizeAudit) }))
+    return audits
+  }
+
+  const applyAuthResponse = async (data: {
+    token: string
+    user: { id: string; companyName: string; email: string; createdAt: string }
+  }) => {
+    setToken(data.token)
+    const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+    setState(prev => ({
+      ...prev,
+      currentCompany: toCompany(data.user),
+      audits: audits.map(normalizeAudit),
+      currentView: 'dashboard',
+    }))
+  }
+
   useEffect(() => {
-    const stored = loadFromStorage()
-    if (stored.companies || stored.audits) {
-      setState(prev => ({
-        ...prev,
-        companies: stored.companies || [],
-        audits: stored.audits || [],
-      }))
+    const token = getToken()
+    if (!token) {
+      setState(prev => ({ ...prev, isInitializing: false }))
+      return
+    }
+
+    let active = true
+
+    async function restoreSession() {
+      try {
+        const user = await apiRequest<{ id: string; companyName: string; email: string; createdAt: string }>('/api/whoiso/me')
+        const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+        if (!active) return
+        setState(prev => ({
+          ...prev,
+          currentCompany: toCompany(user),
+          audits: audits.map(normalizeAudit),
+          currentView: 'dashboard',
+          isInitializing: false,
+        }))
+      } catch {
+        clearToken()
+        if (active) {
+          setState(prev => ({ ...prev, isInitializing: false }))
+        }
+      }
+    }
+
+    restoreSession()
+    return () => {
+      active = false
     }
   }, [])
 
-  // Save to localStorage when companies or audits change
-  useEffect(() => {
-    saveToStorage({ companies: state.companies, audits: state.audits })
-  }, [state.companies, state.audits])
-
-  const login = (companyName: string) => {
-    let company = state.companies.find(c => c.name.toLowerCase() === companyName.toLowerCase())
-    
-    if (!company) {
-      company = {
-        id: generateId(),
-        name: companyName,
-        createdAt: new Date().toISOString(),
+  const login: AppContextType['login'] = async (email, password) => {
+    try {
+      const challenge = await apiRequest<AuthChallenge>('/api/whoiso/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+      return { success: true, challenge }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Credenciais nao encontradas.',
       }
-      setState(prev => ({
-        ...prev,
-        companies: [...prev.companies, company!],
-        currentCompany: company!,
-        currentView: 'home',
-      }))
-    } else {
-      setState(prev => ({
-        ...prev,
-        currentCompany: company!,
-        currentView: 'home',
-      }))
+    }
+  }
+
+  const signup: AppContextType['signup'] = async (companyName, email, password) => {
+    try {
+      const challenge = await apiRequest<AuthChallenge>('/api/whoiso/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ companyName, email, password }),
+      })
+      return { success: true, challenge }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Este email ja existe.',
+      }
+    }
+  }
+
+  const verifyOTP: AppContextType['verifyOTP'] = async (challengeId, code) => {
+    try {
+      const data = await apiRequest<{
+        token: string
+        user: { id: string; companyName: string; email: string; createdAt: string }
+      }>('/api/whoiso/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ challengeId, code }),
+      })
+      await applyAuthResponse(data)
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Codigo invalido.',
+      }
     }
   }
 
   const logout = () => {
+    clearToken()
     setState(prev => ({
       ...prev,
       currentCompany: null,
       currentModule: null,
       currentResponses: [],
+      editingAuditId: null,
+      audits: [],
+      auditLogs: [],
       currentView: 'login',
       selectedAuditId: null,
     }))
+  }
+
+  const updateAccount: AppContextType['updateAccount'] = async ({
+    companyName,
+    email,
+    currentPassword,
+    newPassword,
+  }) => {
+    try {
+      const user = await apiRequest<{ id: string; companyName: string; email: string; createdAt: string }>('/api/whoiso/account', {
+        method: 'PATCH',
+        body: JSON.stringify({ companyName, email, currentPassword, newPassword }),
+      })
+      const updatedCompany = toCompany(user)
+      setState(prev => ({
+        ...prev,
+        currentCompany: updatedCompany,
+        audits: prev.audits.map(audit => ({ ...audit, companyName: updatedCompany.name })),
+      }))
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Nao foi possivel salvar as alteracoes.',
+      }
+    }
   }
 
   const selectModule = (module: 'iso27001' | 'iso27701') => {
@@ -145,22 +271,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       currentModule: module,
       currentResponses: [],
-      currentAuditDate: new Date().toISOString().split('T')[0],
+      editingAuditId: null,
+      currentAuditDate: getTodayDateString(),
     }))
   }
 
-  const setAuditDate = (date: string) => {
+  const editAudit = (auditId: string) => {
+    const audit = state.audits.find(a => a.id === auditId)
+    if (!audit) return false
+
     setState(prev => ({
       ...prev,
-      currentAuditDate: date,
+      currentModule: audit.module,
+      currentAuditDate: audit.auditDate,
+      currentResponses: audit.responses.map(response => ({ ...response })),
+      editingAuditId: audit.id,
+      currentView: 'audit',
     }))
+
+    return true
   }
 
-  const setControlResponse = (
-    controlId: string,
-    status: ControlResponse['status'],
-    inProgressDetails?: string
-  ) => {
+  const setControlResponse: AppContextType['setControlResponse'] = (controlId, status, inProgressDetails) => {
     setState(prev => {
       const existingIndex = prev.currentResponses.findIndex(r => r.controlId === controlId)
       const newResponse: ControlResponse = {
@@ -168,36 +300,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
         status,
         inProgressDetails: status === 'em-andamento' ? inProgressDetails : undefined,
       }
-      
+
       if (existingIndex >= 0) {
         const newResponses = [...prev.currentResponses]
         newResponses[existingIndex] = newResponse
         return { ...prev, currentResponses: newResponses }
-      } else {
-        return { ...prev, currentResponses: [...prev.currentResponses, newResponse] }
       }
+
+      return { ...prev, currentResponses: [...prev.currentResponses, newResponse] }
     })
   }
 
-  const saveAudit = () => {
+  const saveAudit = async () => {
     if (!state.currentCompany || !state.currentModule) return
-    
-    const audit: AuditRecord = {
-      id: generateId(),
-      companyName: state.currentCompany.name,
-      auditDate: state.currentAuditDate,
+
+    const body = JSON.stringify({
       module: state.currentModule,
+      auditDate: state.currentAuditDate,
       responses: state.currentResponses,
-      createdAt: new Date().toISOString(),
-    }
-    
+    })
+    const path = state.editingAuditId
+      ? `/api/whoiso/audits/${state.editingAuditId}`
+      : '/api/whoiso/audits'
+    const method = state.editingAuditId ? 'PUT' : 'POST'
+    const savedAudit = normalizeAudit(await apiRequest<AuditRecord>(path, { method, body }))
+
     setState(prev => ({
       ...prev,
-      audits: [...prev.audits, audit],
+      audits: prev.audits.some(audit => audit.id === savedAudit.id)
+        ? prev.audits.map(audit => audit.id === savedAudit.id ? savedAudit : audit)
+        : [savedAudit, ...prev.audits],
       currentResponses: [],
-      selectedAuditId: audit.id,
+      editingAuditId: null,
+      selectedAuditId: savedAudit.id,
       currentView: 'dashboard',
     }))
+
+    await loadAudits()
   }
 
   const clearCurrentAudit = () => {
@@ -205,7 +344,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       currentModule: null,
       currentResponses: [],
-      currentAuditDate: new Date().toISOString().split('T')[0],
+      editingAuditId: null,
+      currentAuditDate: getTodayDateString(),
     }))
   }
 
@@ -221,16 +361,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, selectedAuditId: id }))
   }
 
+  const loadAuditLogs: AppContextType['loadAuditLogs'] = async (auditId) => {
+    try {
+      const logs = await apiRequest<AuditLog[]>(`/api/whoiso/audits/${auditId}/logs`)
+      setState(prev => ({
+        ...prev,
+        selectedAuditId: auditId,
+        auditLogs: logs,
+        currentView: 'auditLogs',
+      }))
+      return true
+    } catch {
+      return false
+    }
+  }
+
   const getCompanyAudits = (module?: 'iso27001' | 'iso27701') => {
     if (!state.currentCompany) return []
-    
-    let audits = state.audits.filter(a => a.companyName === state.currentCompany!.name)
-    
+    let audits = state.audits
     if (module) {
       audits = audits.filter(a => a.module === module)
     }
-    
-    return audits.sort((a, b) => new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime())
+    return [...audits].sort((a, b) => {
+      const dateDiff = new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime()
+      return dateDiff || b.auditNumber - a.auditNumber
+    })
   }
 
   const getAuditById = (id: string) => {
@@ -242,15 +397,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         ...state,
         login,
+        signup,
+        verifyOTP,
+        updateAccount,
         logout,
         selectModule,
-        setAuditDate,
+        editAudit,
         setControlResponse,
         saveAudit,
         clearCurrentAudit,
         setView,
         setDashboardMode,
         setSelectedAuditId,
+        loadAuditLogs,
         getCompanyAudits,
         getAuditById,
       }}
