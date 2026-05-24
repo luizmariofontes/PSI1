@@ -27,6 +27,7 @@ export function AuditPage() {
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showFinishDialog, setShowFinishDialog] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const controls = useMemo(() => {
     if (currentModule === 'iso27001') return iso27002Controls
@@ -64,8 +65,10 @@ export function AuditPage() {
     setShowFinishDialog(true)
   }
 
-  const handleConfirmFinish = () => {
-    saveAudit()
+  const handleConfirmFinish = async () => {
+    setSaving(true)
+    await saveAudit()
+    setSaving(false)
     setShowFinishDialog(false)
   }
 
@@ -179,8 +182,8 @@ export function AuditPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmFinish}>
-              {editingAuditId ? 'Salvar alterações' : 'Finalizar'}
+            <AlertDialogAction onClick={handleConfirmFinish} disabled={saving}>
+              {saving ? 'Salvando...' : editingAuditId ? 'Salvar alterações' : 'Finalizar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

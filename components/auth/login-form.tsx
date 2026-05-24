@@ -16,8 +16,9 @@ export function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!email.trim() || !password) {
@@ -25,7 +26,9 @@ export function LoginForm() {
       return
     }
 
-    const loggedIn = login(email, password)
+    setLoading(true)
+    const loggedIn = await login(email, password)
+    setLoading(false)
 
     if (!loggedIn) {
       setError('Credenciais não encontradas.')
@@ -121,8 +124,8 @@ export function LoginForm() {
               </div>
             )}
 
-            <Button type="submit" className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700">
-              Entrar
+            <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700">
+              {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
 

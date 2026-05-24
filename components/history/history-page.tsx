@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatAuditNumber, formatDate, calculateStats, getStatusColor } from '@/lib/audit-utils'
 import { iso27002Controls } from '@/lib/data/iso27002-controls'
 import { iso27701Controls } from '@/lib/data/iso27701-controls'
-import { Shield, Lock, BarChart3, Eye, Pencil } from 'lucide-react'
+import { Shield, Lock, BarChart3, Eye, Pencil, ScrollText } from 'lucide-react'
 
 export function HistoryPage() {
   const {
@@ -16,6 +16,7 @@ export function HistoryPage() {
     setDashboardMode,
     setView,
     editAudit,
+    loadAuditLogs,
   } = useApp()
 
   const allAudits = getCompanyAudits()
@@ -28,6 +29,10 @@ export function HistoryPage() {
 
   const handleEditAudit = (auditId: string) => {
     editAudit(auditId)
+  }
+
+  const handleViewLogs = (auditId: string) => {
+    loadAuditLogs(auditId)
   }
 
   if (allAudits.length === 0) {
@@ -147,6 +152,14 @@ export function HistoryPage() {
                         >
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewLogs(audit.id)}
+                        >
+                          <ScrollText className="h-4 w-4 mr-2" />
+                          Logs
                         </Button>
                         <Button
                           variant="ghost"

@@ -17,8 +17,9 @@ export function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!companyName.trim() || !email.trim() || !password) {
@@ -31,7 +32,9 @@ export function SignupForm() {
       return;
     }
 
-    const created = signup(companyName, email, password);
+    setLoading(true);
+    const created = await signup(companyName, email, password);
+    setLoading(false);
 
     if (!created) {
       setError("Este email ja existe.");
@@ -120,9 +123,10 @@ export function SignupForm() {
 
             <Button
               type="submit"
+              disabled={loading}
               className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700"
             >
-              Criar conta
+              {loading ? "Criando..." : "Criar conta"}
             </Button>
           </form>
 

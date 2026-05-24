@@ -30,7 +30,19 @@ export interface Company {
   id: string
   name: string
   email: string
-  password: string
+  createdAt: string
+}
+
+export interface AuditLog {
+  id: string
+  auditId: string
+  action: 'created' | 'updated'
+  actorEmail: string
+  actorCompanyName: string
+  auditNumber: number
+  occurredAt: string
+  previousHash: string
+  hash: string
   createdAt: string
 }
 
@@ -51,6 +63,6 @@ export interface CategoryStats {
   stats: AuditStats
 }
 
-export type ViewMode = 'login' | 'dashboard' | 'audit' | 'history' | 'account'
+export type ViewMode = 'login' | 'dashboard' | 'audit' | 'history' | 'account' | 'auditLogs'
 
 export type DashboardMode = 'current' | 'comparative'

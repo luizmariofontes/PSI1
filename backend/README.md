@@ -19,7 +19,7 @@ O painel administrativo do PocketBase fica em:
 http://127.0.0.1:8090/_/
 ```
 
-## Endpoints iniciais
+## Endpoints
 
 ### Signup
 
@@ -59,3 +59,34 @@ Ambos retornam:
   }
 }
 ```
+
+### Rotas autenticadas
+
+Enviar o token no header:
+
+```http
+Authorization: Bearer <token>
+```
+
+```http
+GET /api/whoiso/me
+PATCH /api/whoiso/account
+GET /api/whoiso/audits
+POST /api/whoiso/audits
+PUT /api/whoiso/audits/{id}
+GET /api/whoiso/audits/{id}/logs
+```
+
+Payload de auditoria:
+
+```json
+{
+  "module": "iso27001",
+  "auditDate": "2026-05-24",
+  "responses": [
+    { "controlId": "5.1", "status": "conforme" }
+  ]
+}
+```
+
+Os logs em `audit_logs` são criados somente pelo backend. Cada criação/edição gera um hash SHA-256 com o estado da auditoria, usuário, data do evento e `previousHash`, formando uma cadeia de integridade.

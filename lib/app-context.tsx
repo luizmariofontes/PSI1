@@ -1,265 +1,241 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { AuditRecord, Company, ControlResponse, ViewMode, DashboardMode } from './types'
-import { generateId, getTodayDateString } from './audit-utils'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { AuditLog, AuditRecord, Company, ControlResponse, DashboardMode, ViewMode } from './types'
+import { getTodayDateString } from './audit-utils'
+
+const API_URL = process.env.NEXT_PUBLIC_WHOISO_API_URL || 'http://127.0.0.1:8090'
+const TOKEN_KEY = 'whoiso-auth-token'
 
 interface AppState {
-  // Company
   currentCompany: Company | null
-  companies: Company[]
-  
-  // Audit
   currentModule: 'iso27001' | 'iso27701' | null
   currentAuditDate: string
   currentResponses: ControlResponse[]
   editingAuditId: string | null
   audits: AuditRecord[]
-  
-  // Navigation
+  auditLogs: AuditLog[]
   currentView: ViewMode
   dashboardMode: DashboardMode
   selectedAuditId: string | null
 }
 
 interface AppContextType extends AppState {
-  // Company actions
-  login: (email: string, password: string) => boolean
-  signup: (companyName: string, email: string, password: string) => boolean
+  login: (email: string, password: string) => Promise<boolean>
+  signup: (companyName: string, email: string, password: string) => Promise<boolean>
   updateAccount: (data: {
     companyName: string
     email: string
     currentPassword?: string
     newPassword?: string
-  }) => { success: boolean; error?: string }
+  }) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  
-  // Audit actions
   selectModule: (module: 'iso27001' | 'iso27701') => void
   editAudit: (auditId: string) => boolean
   setControlResponse: (controlId: string, status: ControlResponse['status'], inProgressDetails?: string) => void
-  saveAudit: () => void
+  saveAudit: () => Promise<void>
   clearCurrentAudit: () => void
-  
-  // Navigation
   setView: (view: ViewMode) => void
   setDashboardMode: (mode: DashboardMode) => void
   setSelectedAuditId: (id: string | null) => void
-  
-  // Data
+  loadAuditLogs: (auditId: string) => Promise<boolean>
   getCompanyAudits: (module?: 'iso27001' | 'iso27701') => AuditRecord[]
   getAuditById: (id: string) => AuditRecord | undefined
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-const STORAGE_KEY = 'whoiso-data'
-
-function normalizeAudits(audits: Partial<AuditRecord>[]): AuditRecord[] {
-  const nextNumberByCompany = new Map<string, number>()
-
-  return audits.map((audit, index) => {
-    const companyName = audit.companyName || 'Empresa'
-    const nextNumber = nextNumberByCompany.get(companyName) || 1
-    const auditNumber = audit.auditNumber || nextNumber
-
-    nextNumberByCompany.set(companyName, Math.max(nextNumber, auditNumber) + 1)
-
-    return {
-      id: audit.id || generateId(),
-      auditNumber,
-      companyName,
-      auditDate: audit.auditDate || getTodayDateString(),
-      module: audit.module === 'iso27701' ? 'iso27701' : 'iso27001',
-      responses: audit.responses || [],
-      createdAt: audit.createdAt || new Date(Date.now() + index).toISOString(),
-    }
-  })
+function getToken() {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(TOKEN_KEY) || ''
 }
 
-function loadFromStorage(): Partial<AppState> {
-  if (typeof window === 'undefined') return {}
-  
-  try {
-    const data = localStorage.getItem(STORAGE_KEY)
-    if (data) {
-      const parsed = JSON.parse(data)
-      const companies = (parsed.companies || []).map((company: Partial<Company>) => ({
-        ...company,
-        email: company.email || `${company.name || 'empresa'}@local.test`.toLowerCase().replace(/\s+/g, ''),
-        password: company.password || 'whoiso123',
-      }))
-
-      return {
-        ...parsed,
-        companies,
-        audits: normalizeAudits(parsed.audits || []),
-      }
-    }
-  } catch (e) {
-    console.error('Error loading from storage:', e)
-  }
-  return {}
-}
-
-function saveToStorage(state: Partial<AppState>) {
+function setToken(token: string) {
   if (typeof window === 'undefined') return
-  
-  try {
-    const dataToSave = {
-      companies: state.companies,
-      audits: state.audits,
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+function clearToken() {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken()
+  const headers = new Headers(options.headers)
+  headers.set('Content-Type', 'application/json')
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  })
+
+  if (!response.ok) {
+    let message = 'Nao foi possivel completar a operacao.'
+    try {
+      const data = await response.json()
+      message = data.message || message
+    } catch {
+      // keep fallback message
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-  } catch (e) {
-    console.error('Error saving to storage:', e)
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+function toCompany(user: { id: string; companyName: string; email: string; createdAt: string }): Company {
+  return {
+    id: user.id,
+    name: user.companyName,
+    email: user.email,
+    createdAt: user.createdAt,
+  }
+}
+
+function normalizeAudit(audit: AuditRecord): AuditRecord {
+  return {
+    ...audit,
+    module: audit.module === 'iso27701' ? 'iso27701' : 'iso27001',
+    responses: audit.responses || [],
   }
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>({
     currentCompany: null,
-    companies: [],
     currentModule: null,
     currentAuditDate: getTodayDateString(),
     currentResponses: [],
     editingAuditId: null,
     audits: [],
-    currentView: 'login' as ViewMode,
+    auditLogs: [],
+    currentView: 'login',
     dashboardMode: 'current',
     selectedAuditId: null,
   })
 
-  // Load data from localStorage on mount
+  const loadAudits = async () => {
+    const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+    setState(prev => ({ ...prev, audits: audits.map(normalizeAudit) }))
+    return audits
+  }
+
   useEffect(() => {
-    const stored = loadFromStorage()
-    if (stored.companies || stored.audits) {
-      setState(prev => ({
-        ...prev,
-        companies: stored.companies || [],
-        audits: stored.audits || [],
-      }))
+    const token = getToken()
+    if (!token) return
+
+    let active = true
+
+    async function restoreSession() {
+      try {
+        const user = await apiRequest<{ id: string; companyName: string; email: string; createdAt: string }>('/api/whoiso/me')
+        const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+        if (!active) return
+        setState(prev => ({
+          ...prev,
+          currentCompany: toCompany(user),
+          audits: audits.map(normalizeAudit),
+          currentView: 'dashboard',
+        }))
+      } catch {
+        clearToken()
+      }
+    }
+
+    restoreSession()
+    return () => {
+      active = false
     }
   }, [])
 
-  // Save to localStorage when companies or audits change
-  useEffect(() => {
-    saveToStorage({ companies: state.companies, audits: state.audits })
-  }, [state.companies, state.audits])
-
-  const login = (email: string, password: string) => {
-    const normalizedEmail = email.trim().toLowerCase()
-    const company = state.companies.find(
-      c => c.email.toLowerCase() === normalizedEmail && c.password === password
-    )
-
-    if (!company) {
+  const login: AppContextType['login'] = async (email, password) => {
+    try {
+      const data = await apiRequest<{
+        token: string
+        user: { id: string; companyName: string; email: string; createdAt: string }
+      }>('/api/whoiso/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+      setToken(data.token)
+      const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+      setState(prev => ({
+        ...prev,
+        currentCompany: toCompany(data.user),
+        audits: audits.map(normalizeAudit),
+        currentView: 'dashboard',
+      }))
+      return true
+    } catch {
       return false
     }
-
-    setState(prev => ({
-      ...prev,
-      currentCompany: company,
-      currentView: 'dashboard',
-    }))
-
-    return true
   }
 
-  const signup = (companyName: string, email: string, password: string) => {
-    const normalizedEmail = email.trim().toLowerCase()
-    const existingCompany = state.companies.find(c => c.email.toLowerCase() === normalizedEmail)
-
-    if (existingCompany) {
+  const signup: AppContextType['signup'] = async (companyName, email, password) => {
+    try {
+      const data = await apiRequest<{
+        token: string
+        user: { id: string; companyName: string; email: string; createdAt: string }
+      }>('/api/whoiso/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ companyName, email, password }),
+      })
+      setToken(data.token)
+      setState(prev => ({
+        ...prev,
+        currentCompany: toCompany(data.user),
+        audits: [],
+        currentView: 'dashboard',
+      }))
+      return true
+    } catch {
       return false
     }
-
-    const company = {
-      id: generateId(),
-      name: companyName.trim(),
-      email: normalizedEmail,
-      password,
-      createdAt: new Date().toISOString(),
-    }
-
-    setState(prev => ({
-      ...prev,
-      companies: [...prev.companies, company],
-      currentCompany: company,
-      currentView: 'dashboard',
-    }))
-
-    return true
   }
 
   const logout = () => {
+    clearToken()
     setState(prev => ({
       ...prev,
       currentCompany: null,
       currentModule: null,
       currentResponses: [],
       editingAuditId: null,
+      audits: [],
+      auditLogs: [],
       currentView: 'login',
       selectedAuditId: null,
     }))
   }
 
-  const updateAccount: AppContextType['updateAccount'] = ({
+  const updateAccount: AppContextType['updateAccount'] = async ({
     companyName,
     email,
     currentPassword,
     newPassword,
   }) => {
-    if (!state.currentCompany) {
-      return { success: false, error: 'Sessão não encontrada.' }
-    }
-
-    const trimmedName = companyName.trim()
-    const normalizedEmail = email.trim().toLowerCase()
-    const trimmedPassword = newPassword?.trim() || ''
-
-    if (!trimmedName || !normalizedEmail) {
-      return { success: false, error: 'Informe nome da empresa e email.' }
-    }
-
-    const emailOwner = state.companies.find(company =>
-      company.email.toLowerCase() === normalizedEmail && company.id !== state.currentCompany!.id
-    )
-
-    if (emailOwner) {
-      return { success: false, error: 'Este email ja esta em uso.' }
-    }
-
-    if (trimmedPassword) {
-      if (currentPassword !== state.currentCompany.password) {
-        return { success: false, error: 'Senha atual incorreta.' }
-      }
-
-      if (trimmedPassword.length < 6) {
-        return { success: false, error: 'A nova senha deve ter pelo menos 6 caracteres.' }
+    try {
+      const user = await apiRequest<{ id: string; companyName: string; email: string; createdAt: string }>('/api/whoiso/account', {
+        method: 'PATCH',
+        body: JSON.stringify({ companyName, email, currentPassword, newPassword }),
+      })
+      const updatedCompany = toCompany(user)
+      setState(prev => ({
+        ...prev,
+        currentCompany: updatedCompany,
+        audits: prev.audits.map(audit => ({ ...audit, companyName: updatedCompany.name })),
+      }))
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Nao foi possivel salvar as alteracoes.',
       }
     }
-
-    const previousCompanyName = state.currentCompany.name
-    const updatedCompany: Company = {
-      ...state.currentCompany,
-      name: trimmedName,
-      email: normalizedEmail,
-      password: trimmedPassword || state.currentCompany.password,
-    }
-
-    setState(prev => ({
-      ...prev,
-      currentCompany: updatedCompany,
-      companies: prev.companies.map(company => company.id === updatedCompany.id ? updatedCompany : company),
-      audits: prev.audits.map(audit =>
-        audit.companyName === previousCompanyName
-          ? { ...audit, companyName: updatedCompany.name }
-          : audit,
-      ),
-    }))
-
-    return { success: true }
   }
 
   const selectModule = (module: 'iso27001' | 'iso27701') => {
@@ -274,10 +250,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const editAudit = (auditId: string) => {
     const audit = state.audits.find(a => a.id === auditId)
-
-    if (!audit) {
-      return false
-    }
+    if (!audit) return false
 
     setState(prev => ({
       ...prev,
@@ -291,11 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return true
   }
 
-  const setControlResponse = (
-    controlId: string,
-    status: ControlResponse['status'],
-    inProgressDetails?: string
-  ) => {
+  const setControlResponse: AppContextType['setControlResponse'] = (controlId, status, inProgressDetails) => {
     setState(prev => {
       const existingIndex = prev.currentResponses.findIndex(r => r.controlId === controlId)
       const newResponse: ControlResponse = {
@@ -303,67 +272,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
         status,
         inProgressDetails: status === 'em-andamento' ? inProgressDetails : undefined,
       }
-      
+
       if (existingIndex >= 0) {
         const newResponses = [...prev.currentResponses]
         newResponses[existingIndex] = newResponse
         return { ...prev, currentResponses: newResponses }
-      } else {
-        return { ...prev, currentResponses: [...prev.currentResponses, newResponse] }
       }
+
+      return { ...prev, currentResponses: [...prev.currentResponses, newResponse] }
     })
   }
 
-  const saveAudit = () => {
+  const saveAudit = async () => {
     if (!state.currentCompany || !state.currentModule) return
 
-    if (state.editingAuditId) {
-      const updatedAudit: AuditRecord = {
-        id: state.editingAuditId,
-        auditNumber: state.audits.find(a => a.id === state.editingAuditId)?.auditNumber || 1,
-        companyName: state.currentCompany.name,
-        auditDate: state.currentAuditDate,
-        module: state.currentModule,
-        responses: state.currentResponses,
-        createdAt: state.audits.find(a => a.id === state.editingAuditId)?.createdAt || new Date().toISOString(),
-      }
-
-      setState(prev => ({
-        ...prev,
-        audits: prev.audits.map(audit => audit.id === state.editingAuditId ? updatedAudit : audit),
-        currentResponses: [],
-        editingAuditId: null,
-        selectedAuditId: updatedAudit.id,
-        currentView: 'dashboard',
-      }))
-
-      return
-    }
-    
-    const audit: AuditRecord = {
-      id: generateId(),
-      auditNumber:
-        Math.max(
-          0,
-          ...state.audits
-            .filter(audit => audit.companyName === state.currentCompany!.name)
-            .map(audit => audit.auditNumber),
-        ) + 1,
-      companyName: state.currentCompany.name,
-      auditDate: state.currentAuditDate,
+    const body = JSON.stringify({
       module: state.currentModule,
+      auditDate: state.currentAuditDate,
       responses: state.currentResponses,
-      createdAt: new Date().toISOString(),
-    }
-    
+    })
+    const path = state.editingAuditId
+      ? `/api/whoiso/audits/${state.editingAuditId}`
+      : '/api/whoiso/audits'
+    const method = state.editingAuditId ? 'PUT' : 'POST'
+    const savedAudit = normalizeAudit(await apiRequest<AuditRecord>(path, { method, body }))
+
     setState(prev => ({
       ...prev,
-      audits: [...prev.audits, audit],
+      audits: prev.audits.some(audit => audit.id === savedAudit.id)
+        ? prev.audits.map(audit => audit.id === savedAudit.id ? savedAudit : audit)
+        : [savedAudit, ...prev.audits],
       currentResponses: [],
       editingAuditId: null,
-      selectedAuditId: audit.id,
+      selectedAuditId: savedAudit.id,
       currentView: 'dashboard',
     }))
+
+    await loadAudits()
   }
 
   const clearCurrentAudit = () => {
@@ -388,16 +333,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, selectedAuditId: id }))
   }
 
+  const loadAuditLogs: AppContextType['loadAuditLogs'] = async (auditId) => {
+    try {
+      const logs = await apiRequest<AuditLog[]>(`/api/whoiso/audits/${auditId}/logs`)
+      setState(prev => ({
+        ...prev,
+        selectedAuditId: auditId,
+        auditLogs: logs,
+        currentView: 'auditLogs',
+      }))
+      return true
+    } catch {
+      return false
+    }
+  }
+
   const getCompanyAudits = (module?: 'iso27001' | 'iso27701') => {
     if (!state.currentCompany) return []
-    
-    let audits = state.audits.filter(a => a.companyName === state.currentCompany!.name)
-    
+    let audits = state.audits
     if (module) {
       audits = audits.filter(a => a.module === module)
     }
-    
-    return audits.sort((a, b) => {
+    return [...audits].sort((a, b) => {
       const dateDiff = new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime()
       return dateDiff || b.auditNumber - a.auditNumber
     })
@@ -423,6 +380,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setView,
         setDashboardMode,
         setSelectedAuditId,
+        loadAuditLogs,
         getCompanyAudits,
         getAuditById,
       }}

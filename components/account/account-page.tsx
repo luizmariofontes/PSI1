@@ -17,6 +17,7 @@ export function AccountPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const audits = getCompanyAudits();
 
@@ -25,7 +26,7 @@ export function AccountPage() {
     setEmail(currentCompany?.email || "");
   }, [currentCompany?.name, currentCompany?.email]);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
     setSuccess("");
@@ -44,12 +45,14 @@ export function AccountPage() {
       }
     }
 
-    const result = updateAccount({
+    setLoading(true);
+    const result = await updateAccount({
       companyName,
       email,
       currentPassword,
       newPassword,
     });
+    setLoading(false);
 
     if (!result.success) {
       setError(result.error || "Não foi possível salvar as alterações.");
@@ -84,7 +87,7 @@ export function AccountPage() {
             <div>
               <h2 className="font-semibold text-slate-900">Dados de acesso</h2>
               <p className="text-xs text-slate-500">
-                As alterações são salvas localmente.
+                As alterações são salvas no servidor.
               </p>
             </div>
           </div>
@@ -205,9 +208,10 @@ export function AccountPage() {
             <div className="flex justify-end">
               <Button
                 type="submit"
+                disabled={loading}
                 className="h-11 rounded-xl bg-blue-600 px-6 font-semibold hover:bg-blue-700"
               >
-                Salvar alterações
+                {loading ? "Salvando..." : "Salvar alterações"}
               </Button>
             </div>
           </form>
