@@ -156,43 +156,15 @@ export function SignupForm() {
         </div>
       </section>
 
-      <section className="hidden min-h-screen bg-[#0f172a] px-12 py-10 text-white lg:px-16 md:block">
-        <div className="flex h-full flex-col justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-              Compliance workspace
-            </div>
-
-            <h2 className="mt-16 max-w-2xl text-5xl font-bold leading-tight tracking-normal lg:text-6xl">
-              Uma base completa para diagnosticar ISO 27001 e ISO 27701.
+      <section className="relative hidden min-h-screen flex-col bg-[#0f172a] px-12 py-10 text-white lg:px-16 md:flex">
+        <div className="flex flex-1 flex-col justify-center">
+          <div className="max-w-xl">
+            <h2 className="text-5xl font-bold leading-tight tracking-normal lg:text-6xl">
+              Eleve o nível de segurança do seu negócio.
             </h2>
-            <p className="mt-6 max-w-xl text-base leading-7 text-slate-400">
-              O cadastro cria a empresa, organiza os dados e libera a
-              experiência completa do produto.
+            <p className="mt-6 max-w-lg text-lg leading-8 text-slate-400">
+              Crie sua conta para iniciar diagnósticos precisos e organizar todos os dados de conformidade da sua empresa de forma estruturada.
             </p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              {
-                label: "Dashboard com indicadores de auditoria",
-                color: "#3b82f6",
-              },
-              { label: "Historico por empresa cadastrada", color: "#10b981" },
-              {
-                label: "Fluxos separados para seguranca e privacidade",
-                color: "#f59e0b",
-              },
-            ].map(({ label, color }) => (
-              <div
-                key={label}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
-              >
-                <CheckCircle2 className="h-5 w-5" style={{ color }} />
-                <p className="text-sm font-medium text-slate-200">{label}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>

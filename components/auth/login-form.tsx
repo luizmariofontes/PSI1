@@ -54,32 +54,20 @@ export function LoginForm() {
 
   return (
     <div className="grid min-h-screen bg-white md:grid-cols-[1.06fr_0.94fr]">
-      <section className="hidden min-h-screen flex-col justify-between bg-[#0f172a] px-12 py-10 text-white lg:px-16 md:flex">
+      <section className="relative hidden min-h-screen flex-col bg-[#0f172a] px-12 py-10 text-white lg:px-16 md:flex">
         <div>
           <WhoISOLogo inverse mode="dark" className="w-48" />
-
-          <div className="mt-20 max-w-xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-300">Acesso seguro</p>
-            <h1 className="mt-4 text-5xl font-bold leading-tight tracking-normal lg:text-6xl">
-              Acompanhe a maturidade ISO da sua empresa.
-            </h1>
-            <p className="mt-6 max-w-lg text-base leading-7 text-slate-400">
-              Entre para visualizar indicadores, iniciar auditorias e revisar o histórico de conformidade em um só lugar.
-            </p>
-          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: 'ISO 27001', icon: ShieldCheck, color: '#10b981' },
-            { label: 'Controles', icon: BarChart3, color: '#3b82f6' },
-            { label: 'Privacidade', icon: Lock, color: '#f59e0b' },
-          ].map(({ label, icon: Icon, color }) => (
-            <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-              <Icon className="h-5 w-5" style={{ color }} />
-              <p className="mt-4 text-sm font-medium text-slate-300">{label}</p>
-            </div>
-          ))}
+        <div className="flex flex-1 flex-col justify-center">
+          <div className="max-w-xl">
+            <h1 className="text-5xl font-bold leading-tight tracking-normal lg:text-6xl">
+              Acompanhe a conformidade da sua empresa.
+            </h1>
+            <p className="mt-6 max-w-lg text-lg leading-8 text-slate-400">
+              Uma plataforma centralizada para gerenciar auditorias ISO 27001, 27002 e 27701, visualizar indicadores e acessar seu histórico com segurança.
+            </p>
+          </div>
         </div>
       </section>
 
