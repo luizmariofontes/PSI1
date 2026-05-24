@@ -1,10 +1,10 @@
-# 🔒 Sistema de Diagnóstico de Conformidade ISO/IEC 27001 e 27701
+# Sistema de Diagnóstico de Conformidade ISO/IEC 27001 e 27701
 
-> **Projeto de Segurança I (PSI)** — Ferramenta para diagnóstico de conformidade com as normas **ABNT NBR ISO/IEC 27001** (Sistema de Gestão de Segurança da Informação) e **ABNT NBR ISO/IEC 27701** (Sistema de Gestão da Privacidade da Informação), utilizando a **ABNT NBR ISO/IEC 27002** como base de avaliação para a conformidade da 27001.
+> **Projeto de Segurança I (PSI)**\: Ferramenta para diagnóstico de conformidade com as normas **ABNT NBR ISO/IEC 27001** (Sistema de Gestão de Segurança da Informação) e **ABNT NBR ISO/IEC 27701** (Sistema de Gestão da Privacidade da Informação), utilizando a **ABNT NBR ISO/IEC 27002** como base de avaliação para a conformidade da 27001.
 
 ---
 
-## 📑 Sumário
+## Sumário
 
 - [Descrição do Sistema](#-descrição-do-sistema)
 - [Objetivos](#-objetivos)
@@ -16,34 +16,23 @@
   - [Diagrama de Classes](#diagrama-de-classes)
   - [Diagrama de Atividades](#diagrama-de-atividades)
 - [Tecnologias](#️-tecnologias)
-- [Equipe](#-equipe)
 - [Referências](#-referências)
 
 ---
 
-## 📖 Descrição do Sistema
+## Descrição do Sistema
 
 O **Sistema de Diagnóstico de Conformidade ISO 27001/27701** é uma ferramenta acadêmica desenvolvida no contexto da disciplina **Projeto de Segurança I (PSI)** cujo objetivo é auxiliar auditores, profissionais de segurança da informação e responsáveis pelo programa de privacidade de uma organização a realizar **autoavaliações de conformidade** frente a duas das principais normas internacionais da família ISO/IEC 27000:
 
-- **ABNT NBR ISO/IEC 27001** — Estabelece os requisitos para um Sistema de Gestão de Segurança da Informação (SGSI).
-- **ABNT NBR ISO/IEC 27701:2026** — Estende a 27001 para a gestão da privacidade de informações pessoais, sendo a referência para um Sistema de Gestão da Privacidade da Informação (SGPI). É aplicável tanto a controladores quanto a operadores de dados pessoais (DP) e está mapeada à LGPD (Lei nº 13.709/2018).
-- **ABNT NBR ISO/IEC 27002:2022** — Fornece o catálogo detalhado de controles utilizados como **base de diagnóstico** para a 27001, organizados em quatro temas (Organizacional, Pessoas, Físico e Tecnológico), totalizando 93 controles.
+- **ABNT NBR ISO/IEC 27001**: Estabelece os requisitos para um Sistema de Gestão de Segurança da Informação (SGSI).
+- **ABNT NBR ISO/IEC 27701:2026**: Estende a 27001 para a gestão da privacidade de informações pessoais, sendo a referência para um Sistema de Gestão da Privacidade da Informação (SGPI). É aplicável tanto a controladores quanto a operadores de dados pessoais (DP) e está mapeada à LGPD (Lei nº 13.709/2018).
+- **ABNT NBR ISO/IEC 27002:2022**: Fornece o catálogo detalhado de controles utilizados como **base de diagnóstico** para a 27001, organizados em quatro temas (Organizacional, Pessoas, Físico e Tecnológico), totalizando 93 controles.
 
 A ferramenta permite que o usuário **selecione o módulo de auditoria** (27001 ou 27701), informe os dados da empresa avaliada, percorra todos os controles aplicáveis e classifique cada um como **Conforme**, **Não Conforme** ou **Não se Aplica**. Quando um controle for considerado não conforme, o sistema registra também se existe **trabalho em andamento** para sua adequação. Ao final, os dados são consolidados em um **dashboard** com indicadores parciais (por tipo de controle) e geral de conformidade, além de permitir a geração de **relatórios** e **análise comparativa** com auditorias anteriores (até as 3 últimas).
 
-### Problema que o sistema resolve
-
-Auditorias de conformidade em normas ISO costumam ser feitas com planilhas ad-hoc, dificultando: (i) a padronização do diagnóstico, (ii) a visualização agregada do nível de maturidade da organização e (iii) o acompanhamento da evolução ao longo do tempo. Esta ferramenta centraliza essas três frentes em uma interface única, oferecendo uma trilha de auditoria reproduzível e métricas comparáveis entre ciclos.
-
-### Público-alvo
-
-- Auditores internos de segurança da informação e privacidade
-- Analistas de compliance / DPOs (Data Protection Officers, ou "Encarregados pelo Tratamento de Dados Pessoais", na nomenclatura da LGPD)
-- Estudantes e profissionais em treinamento nas normas da família ISO 27000
-
 ---
 
-## 🎯 Objetivos
+## Objetivos
 
 - Permitir a realização de auditorias internas guiadas, baseadas nos controles da ABNT NBR ISO/IEC 27002 e do Anexo A da ABNT NBR ISO/IEC 27701.
 - Apoiar o diagnóstico de **conformidade** organizacional para 27001 (segurança) e 27701 (privacidade).
@@ -53,110 +42,110 @@ Auditorias de conformidade em normas ISO costumam ser feitas com planilhas ad-ho
 
 ---
 
-## 🧩 Requisitos Funcionais
+## Requisitos Funcionais
 
-Os requisitos funcionais (RF) descrevem **o que o sistema deve fazer** — as funcionalidades observáveis pelo usuário final. Cada requisito abaixo está vinculado a um trecho do enunciado do PSI e/ou a uma cláusula normativa.
+Os requisitos funcionais (RF) descrevem **o que o sistema deve fazer**, as funcionalidades observáveis pelo usuário final. Cada requisito abaixo está vinculado a um trecho do enunciado do PSI e/ou a uma cláusula normativa.
 
 > 💡 *Clique em cada requisito para expandir os detalhes.*
 
 <details>
-<summary><strong>RF01 — Seleção de Módulo Normativo</strong></summary>
+<summary><strong>RF01 - Seleção de Módulo Normativo</strong></summary>
 
 <br>
 
 O sistema deve permitir que o usuário selecione, no início de cada auditoria, entre dois módulos mutuamente exclusivos: **ISO/IEC 27001** (segurança da informação) ou **ISO/IEC 27701** (privacidade da informação). A escolha do módulo determina o catálogo de controles que será carregado para a avaliação subsequente.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Um módulo para 27001 e outro para 27701"
+- **Origem:** PSI - "Um módulo para 27001 e outro para 27701"
 
 </details>
 
 <details>
-<summary><strong>RF02 — Carregamento do Catálogo de Controles</strong></summary>
+<summary><strong>RF02 - Carregamento do Catálogo de Controles</strong></summary>
 
 <br>
 
 O sistema deve carregar automaticamente os controles aplicáveis ao módulo escolhido. Para o módulo **27001**, deve utilizar os 93 controles da **ISO/IEC 27002:2022**, distribuídos nos quatro temas (Organizacional, Pessoas, Físico e Tecnológico). Para o módulo **27701**, deve utilizar os controles do **Anexo A da ISO/IEC 27701:2026**, abrangendo as Tabelas A.1 (controladores), A.2 (operadores) e A.3 (considerações de segurança comuns).
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Utilizar 27002 para diagnóstico da conformidade de 27001"
+- **Origem:** PSI - "Utilizar 27002 para diagnóstico da conformidade de 27001"
 
 </details>
 
 <details>
-<summary><strong>RF03 — Cadastro da Empresa Auditada</strong></summary>
+<summary><strong>RF03 - Cadastro da Empresa Auditada</strong></summary>
 
 <br>
 
 O sistema deve permitir o cadastro da organização sob avaliação, capturando, no mínimo, o **nome (razão social)** e o **CNPJ**. Empresas previamente cadastradas devem poder ser reutilizadas em novas auditorias sem necessidade de recadastro.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Perguntar nome da empresa"
+- **Origem:** PSI - "Perguntar nome da empresa"
 
 </details>
 
 <details>
-<summary><strong>RF04 — Registro da Data da Auditoria</strong></summary>
+<summary><strong>RF04 - Registro da Data da Auditoria</strong></summary>
 
 <br>
 
 O sistema deve registrar a data de realização da auditoria (preferencialmente capturada de forma automática), associando-a ao registro da auditoria para fins de rastreabilidade temporal e comparativo histórico.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Armazenar os dados e data de auditoria"
+- **Origem:** PSI - "Armazenar os dados e data de auditoria"
 
 </details>
 
 <details>
-<summary><strong>RF05 — Classificação Individual de Controles</strong></summary>
+<summary><strong>RF05 - Classificação Individual de Controles</strong></summary>
 
 <br>
 
 Para cada controle apresentado, o sistema deve permitir que o auditor atribua **uma única** das três classificações mutuamente exclusivas: **Conforme**, **Não Conforme** ou **Não se Aplica**. A classificação deve poder ser acompanhada de uma **observação textual opcional** justificando a decisão.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Para cada controle, perguntar se está conforme ou não está conforme ou não se aplica"
+- **Origem:** PSI - "Para cada controle, perguntar se está conforme ou não está conforme ou não se aplica"
 
 </details>
 
 <details>
-<summary><strong>RF06 — Registro de Trabalho em Andamento para Não Conformidades</strong></summary>
+<summary><strong>RF06 - Registro de Trabalho em Andamento para Não Conformidades</strong></summary>
 
 <br>
 
 Sempre que um controle for classificado como **Não Conforme**, o sistema deve perguntar se há **trabalho em andamento** para a sua adequação. A resposta (Sim/Não) deve ser armazenada como atributo da resposta ao controle, permitindo distinguir não conformidades já em remediação daquelas ainda sem tratamento.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Caso não esteja conforme, perguntar se existe alguma trabalho em andamento"
+- **Origem:** PSI - "Caso não esteja conforme, perguntar se existe alguma trabalho em andamento"
 
 </details>
 
 <details>
-<summary><strong>RF07 — Persistência da Auditoria</strong></summary>
+<summary><strong>RF07 - Persistência da Auditoria</strong></summary>
 
 <br>
 
 Ao finalizar a avaliação dos controles, o sistema deve **persistir** todos os dados da auditoria (empresa, módulo, data, respostas, observações) em armazenamento durável, garantindo que possam ser recuperados em sessões posteriores.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Armazenar os dados"
+- **Origem:** PSI - "Armazenar os dados"
 
 </details>
 
 <details>
-<summary><strong>RF08 — Manutenção de Histórico das 3 Últimas Auditorias</strong></summary>
+<summary><strong>RF08 - Manutenção de Histórico das 3 Últimas Auditorias</strong></summary>
 
 <br>
 
 O sistema deve preservar, por combinação de **empresa + módulo**, o registro das **três auditorias mais recentes** para fins de comparativo evolutivo. Registros mais antigos podem ser arquivados, descartados ou ficar inacessíveis ao módulo de comparação.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Armazenar os dados e data de auditoria para efeitos comparativos (3 últimas auditorias)"
+- **Origem:** PSI - "Armazenar os dados e data de auditoria para efeitos comparativos (3 últimas auditorias)"
 
 </details>
 
 <details>
-<summary><strong>RF09 — Cálculo da Conformidade Geral</strong></summary>
+<summary><strong>RF09 - Cálculo da Conformidade Geral</strong></summary>
 
 <br>
 
@@ -167,99 +156,99 @@ O sistema deve calcular o **percentual geral de conformidade** da auditoria, def
 </details>
 
 <details>
-<summary><strong>RF10 — Cálculo da Conformidade por Tipo de Controle</strong></summary>
+<summary><strong>RF10 - Cálculo da Conformidade por Tipo de Controle</strong></summary>
 
 <br>
 
 O sistema deve calcular percentuais **parciais** de conformidade segregados por **tipo de controle**, conforme a taxonomia adotada pelo módulo: as quatro categorias da ISO/IEC 27002 para o módulo 27001 (Organizacional, Pessoas, Físico, Tecnológico) ou as categorias do Anexo A da ISO/IEC 27701 para o módulo de privacidade.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Agrupar os dados por tipos de controle (27002)"
+- **Origem:** PSI - "Agrupar os dados por tipos de controle (27002)"
 
 </details>
 
 <details>
-<summary><strong>RF11 — Dashboard de Conformidade</strong></summary>
+<summary><strong>RF11 - Dashboard de Conformidade</strong></summary>
 
 <br>
 
 O sistema deve apresentar um **painel consolidado (dashboard)** exibindo simultaneamente: (i) o percentual geral de conformidade, (ii) os percentuais parciais por tipo de controle, e (iii) elementos gráficos que facilitem a leitura visual dos resultados.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Apresentar os dados no formato de dashboard"
+- **Origem:** PSI - "Apresentar os dados no formato de dashboard"
 
 </details>
 
 <details>
-<summary><strong>RF12 — Visualização Gráfica dos Resultados</strong></summary>
+<summary><strong>RF12 - Visualização Gráfica dos Resultados</strong></summary>
 
 <br>
 
 O dashboard deve oferecer pelo menos **dois tipos de gráficos**: um gráfico de **pizza** (ou rosca) representando a distribuição entre Conforme / Não Conforme / Não se Aplica, e um gráfico de **barras** comparando o percentual de conformidade entre os tipos de controle.
 
 - **Prioridade:** Importante
-- **Origem:** PSI — "gráficos (pizza ou barra)"
+- **Origem:** PSI - "gráficos (pizza ou barra)"
 
 </details>
 
 <details>
-<summary><strong>RF13 — Geração de Relatório por Tipo de Controle</strong></summary>
+<summary><strong>RF13 - Geração de Relatório por Tipo de Controle</strong></summary>
 
 <br>
 
 O sistema deve permitir gerar um **relatório segmentado por categoria de controle**, listando para cada tipo todos os controles avaliados, sua classificação, indicação de trabalho em andamento (quando aplicável) e observações registradas pelo auditor.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Apresentar relatórios por tipos de controle"
+- **Origem:** PSI - "Apresentar relatórios por tipos de controle"
 
 </details>
 
 <details>
-<summary><strong>RF14 — Geração de Relatório Completo</strong></summary>
+<summary><strong>RF14 - Geração de Relatório Completo</strong></summary>
 
 <br>
 
 O sistema deve permitir gerar um **relatório completo** consolidando todos os controles avaliados na auditoria atual, em ordem de catálogo, com classificação, indicação de andamento e observações.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "relatório completo de conformidade"
+- **Origem:** PSI - "relatório completo de conformidade"
 
 </details>
 
 <details>
-<summary><strong>RF15 — Geração de Relatório Comparativo</strong></summary>
+<summary><strong>RF15 - Geração de Relatório Comparativo</strong></summary>
 
 <br>
 
 O sistema deve permitir gerar **relatórios comparativos** confrontando a auditoria atual com as anteriores (até as 3 últimas) da mesma empresa e módulo, evidenciando a **evolução** dos indicadores de conformidade. O comparativo deve estar disponível tanto para o formato por tipo quanto para o completo.
 
 - **Prioridade:** Essencial
-- **Origem:** PSI — "Funcionalidade de comparativo / mostrar evolução de conformidade"
+- **Origem:** PSI - "Funcionalidade de comparativo / mostrar evolução de conformidade"
 
 </details>
 
 <details>
-<summary><strong>RF16 — Restrição Temporal para Geração de Relatórios</strong></summary>
+<summary><strong>RF16 - Restrição Temporal para Geração de Relatórios</strong></summary>
 
 <br>
 
 A funcionalidade de relatórios deve estar disponível **somente após a conclusão (finalização)** da auditoria corrente. Auditorias em andamento não podem produzir relatórios definitivos, apenas pré-visualizações de progresso.
 
 - **Prioridade:** Importante
-- **Origem:** PSI — "Relatórios (somente após a conclusão de auditoria)"
+- **Origem:** PSI - "Relatórios (somente após a conclusão de auditoria)"
 
 </details>
 
 ---
 
-## 🛡️ Requisitos Não Funcionais
+## Requisitos Não Funcionais
 
-Os requisitos não funcionais (RNF) descrevem **atributos de qualidade** do sistema — como ele deve se comportar e quais restrições deve respeitar.
+Os requisitos não funcionais (RNF) descrevem **atributos de qualidade** do sistema, como ele deve se comportar e quais restrições deve respeitar.
 
 > 💡 *Clique em cada requisito para expandir os detalhes.*
 
 <details>
-<summary><strong>RNF01 — Usabilidade</strong></summary>
+<summary><strong>RNF01 - Usabilidade</strong></summary>
 
 <br>
 
@@ -268,7 +257,7 @@ Considerando que uma auditoria 27001 envolve a avaliação sequencial de até 93
 </details>
 
 <details>
-<summary><strong>RNF02 — Confiabilidade dos Dados</strong></summary>
+<summary><strong>RNF02 - Confiabilidade dos Dados</strong></summary>
 
 <br>
 
@@ -277,7 +266,7 @@ Nenhum dado de auditoria pode ser **perdido entre sessões** ou em caso de falha
 </details>
 
 <details>
-<summary><strong>RNF03 — Segurança da Aplicação</strong></summary>
+<summary><strong>RNF03 - Segurança da Aplicação</strong></summary>
 
 <br>
 
@@ -291,7 +280,7 @@ Por tratar de dados sensíveis de auditoria, o próprio sistema deve seguir boas
 </details>
 
 <details>
-<summary><strong>RNF04 — Conformidade Normativa do Catálogo</strong></summary>
+<summary><strong>RNF04 - Conformidade Normativa do Catálogo</strong></summary>
 
 <br>
 
@@ -300,7 +289,7 @@ O catálogo de controles embutido na ferramenta deve refletir as **edições vig
 </details>
 
 <details>
-<summary><strong>RNF05 — Performance e Tempo de Resposta</strong></summary>
+<summary><strong>RNF05 - Performance e Tempo de Resposta</strong></summary>
 
 <br>
 
@@ -309,7 +298,7 @@ Operações de leitura (carregamento de controles, exibição do dashboard, recu
 </details>
 
 <details>
-<summary><strong>RNF06 — Portabilidade</strong></summary>
+<summary><strong>RNF06 - Portabilidade</strong></summary>
 
 <br>
 
@@ -318,7 +307,7 @@ O sistema deve poder ser executado em ambientes de uso comum em organizações (
 </details>
 
 <details>
-<summary><strong>RNF07 — Manutenibilidade</strong></summary>
+<summary><strong>RNF07 - Manutenibilidade</strong></summary>
 
 <br>
 
@@ -327,7 +316,7 @@ A separação clara entre o **catálogo de controles** (dados normativos), as **
 </details>
 
 <details>
-<summary><strong>RNF08 — Auditabilidade</strong></summary>
+<summary><strong>RNF08 - Auditabilidade</strong></summary>
 
 <br>
 
@@ -336,7 +325,7 @@ Sendo a aplicação uma ferramenta de auditoria, o próprio sistema deve ser **a
 </details>
 
 <details>
-<summary><strong>RNF09 — Idioma e Localização</strong></summary>
+<summary><strong>RNF09 - Idioma e Localização</strong></summary>
 
 <br>
 
@@ -345,7 +334,7 @@ A interface, o catálogo de controles e os relatórios gerados devem estar em **
 </details>
 
 <details>
-<summary><strong>RNF10 — Privacidade dos Dados de Auditoria</strong></summary>
+<summary><strong>RNF10 - Privacidade dos Dados de Auditoria</strong></summary>
 
 <br>
 
@@ -355,19 +344,19 @@ Os dados de auditoria, embora não sejam dados pessoais em sentido estrito, pode
 
 ---
 
-## 🏗️ Arquitetura Conceitual
+## Arquitetura Conceitual
 
 O sistema é estruturado em camadas:
 
-- **Apresentação** — Interface do usuário (formulários de auditoria, dashboard e relatórios).
-- **Aplicação / Domínio** — Regras de negócio: classificação de controles, cálculo de percentuais de conformidade, comparação histórica.
-- **Persistência** — Armazenamento das auditorias, respostas e metadados (data, empresa, módulo).
+- **Apresentação**: Interface do usuário (formulários de auditoria, dashboard e relatórios).
+- **Aplicação / Domínio**: Regras de negócio: classificação de controles, cálculo de percentuais de conformidade, comparação histórica.
+- **Persistência**: Armazenamento das auditorias, respostas e metadados (data, empresa, módulo).
 
 A separação entre **módulos** (27001 e 27701) e **tipos de controle** (categorias da 27002 e do Anexo A da 27701) é refletida diretamente no modelo de classes apresentado adiante.
 
 ---
 
-## 📊 Diagramas UML
+## Diagramas UML
 
 ### Diagrama de Casos de Uso
 
@@ -596,52 +585,28 @@ flowchart TD
 ```
 
 **Pontos de atenção do fluxo:**
-- A **Fase 3** modela explicitamente o paralelismo entre cálculo de indicadores, agrupamento de dados e recuperação do histórico — operações independentes que podem ocorrer concorrentemente antes da composição do dashboard.
+- A **Fase 3** modela explicitamente o paralelismo entre cálculo de indicadores, agrupamento de dados e recuperação do histórico, operações independentes que podem ocorrer concorrentemente antes da composição do dashboard.
 - A **Fase 4** trata a exceção em que o auditor solicita relatório comparativo sem ter histórico suficiente armazenado, retornando o fluxo para o ponto de decisão em vez de quebrar a operação.
 - A persistência ocorre **apenas após o fechamento da auditoria** (E9), atendendo ao RNF02 e ao RF16.
 
 ---
 
-## 🛠️ Tecnologias
+## Tecnologias
 
-> *Stack a ser definida pelo grupo durante o desenvolvimento.*
-
-- **Linguagem:** *a definir*
-- **Persistência:** *a definir*
-- **Visualização (gráficos):** *a definir*
-
----
-
-## 👥 Equipe
-
-| Integrante     | Responsabilidade                                       |
-| -------------- | ------------------------------------------------------ |
-| *Integrante 1* | Documentação, diagramas UML e descrição do sistema     |
-| *Integrante 2* | *a definir*                                            |
-| *Integrante 3* | *a definir*                                            |
+- **Linguagens BackEnd:** Golang, PocketBase, SQLite.
+- **Linguagens FrontEnd:** Next.js, React, Tailwind, Shacnui.
+- **Envio de e-mail:** API Resend
+- **Integração com IA:** Google Gemini API
+- **Visualização (gráficos):** Recharts
 
 ---
 
-## 📚 Referências
+## Referências
 
-### Normas técnicas
+- **ABNT NBR ISO/IEC 27002:2022** - *Segurança da informação, segurança cibernética e proteção da privacidade - Controles de segurança da informação.* Rio de Janeiro: ABNT, 2022.
 
-- **ABNT NBR ISO/IEC 27001:2022** — *Tecnologia da informação — Técnicas de segurança — Sistemas de gestão da segurança da informação — Requisitos.* Rio de Janeiro: ABNT, 2022.
-
-- **ABNT NBR ISO/IEC 27002:2022** — *Segurança da informação, segurança cibernética e proteção da privacidade — Controles de segurança da informação.* Rio de Janeiro: ABNT, 2022. *(Anexo deste projeto)*
-
-- **ABNT NBR ISO/IEC 27701:2026** — *Segurança da informação, segurança cibernética e proteção da privacidade — Sistemas de gestão da privacidade da informação — Requisitos e orientações.* 2ª edição. Rio de Janeiro: ABNT, 22 jan. 2026. 90 p. ICS 03.100.70; 35.030. Adoção idêntica da ISO/IEC 27701:2025. Cancela e substitui a ABNT NBR ISO/IEC 27701:2020. *(Anexo deste projeto)*
-
-- **ABNT NBR ISO/IEC 29100** — *Tecnologia da informação — Técnicas de segurança — Estrutura de privacidade.* Rio de Janeiro: ABNT. *(Referência normativa citada pela ISO/IEC 27701)*
-
-### Legislação
-
-- **BRASIL.** Lei nº 13.709, de 14 de agosto de 2018. *Lei Geral de Proteção de Dados Pessoais (LGPD).* Brasília: Presidência da República, 2018. Disponível em: <https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm>.
-
-### Documentos do projeto
-
-- **PSI.md** — Especificação da atividade fornecida pelo professor, contendo os requisitos do sistema, artefatos esperados e fluxograma sugerido. (Disciplina de Projeto de Segurança I, maio de 2025).
+- **ABNT NBR ISO/IEC 27701:2026** - *Segurança da informação, segurança cibernética e proteção da privacidade - Sistemas de gestão da privacidade da informação - Requisitos e orientações.* 2ª edição. Rio de Janeiro: ABNT, 22 jan. 2026. 90 p. ICS 03.100.70; 35.030. Adoção idêntica da ISO/IEC 27701:2025. Cancela e substitui a ABNT NBR ISO/IEC 27701:2020.
 
 ---
 
-*Projeto desenvolvido para fins acadêmicos na disciplina de Projeto de Segurança I (PSI) — apresentações nos dias 25 e 26 de maio.*
+*Projeto desenvolvido para fins acadêmicos na disciplina de Projeto de Segurança I (PSI) - apresentações nos dias 25 e 26 de maio.*
