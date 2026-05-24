@@ -1,0 +1,9 @@
+.git
+.gocache
+.gomodcache
+pb_data
+pb_public
+pb_hooks
+whoiso-backend
+.env
+Dockerfile
