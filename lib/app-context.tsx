@@ -18,6 +18,7 @@ interface AppState {
   currentView: ViewMode
   dashboardMode: DashboardMode
   selectedAuditId: string | null
+  isInitializing: boolean
 }
 
 interface AppContextType extends AppState {
@@ -116,6 +117,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     currentView: 'login',
     dashboardMode: 'current',
     selectedAuditId: null,
+    isInitializing: true,
   })
 
   const loadAudits = async () => {
@@ -126,7 +128,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = getToken()
-    if (!token) return
+    if (!token) {
+      setState(prev => ({ ...prev, isInitializing: false }))
+      return
+    }
 
     let active = true
 
@@ -140,9 +145,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           currentCompany: toCompany(user),
           audits: audits.map(normalizeAudit),
           currentView: 'dashboard',
+          isInitializing: false,
         }))
       } catch {
         clearToken()
+        if (active) {
+          setState(prev => ({ ...prev, isInitializing: false }))
+        }
       }
     }
 

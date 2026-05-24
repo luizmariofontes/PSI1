@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { BarChart3, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { BarChart3, Lock, Mail, ShieldCheck, Loader2 } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,11 +12,25 @@ import { WhoISOLogo } from '@/components/brand/whoiso-logo'
 
 export function LoginForm() {
   const router = useRouter()
-  const { login } = useApp()
+  const { login, currentCompany, isInitializing } = useApp()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!isInitializing && currentCompany) {
+      router.push('/')
+    }
+  }, [isInitializing, currentCompany, router])
+
+  if (isInitializing || currentCompany) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
