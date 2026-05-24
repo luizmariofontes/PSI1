@@ -7,6 +7,16 @@ import { ViewMode } from '@/lib/types'
 import { getTodayDateString } from '@/lib/audit-utils'
 import { StartAuditConfirmDialog } from '@/components/audit/start-audit-confirm-dialog'
 import { WhoISOLogo } from '@/components/brand/whoiso-logo'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 // ── ItsHover Animated SVG Icons ──────────────────────────────────────────────
 
@@ -306,6 +316,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [pendingModule, setPendingModule] = useState<'iso27001' | 'iso27701' | null>(null)
   const [pendingAuditDate, setPendingAuditDate] = useState(getTodayDateString())
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const navigate = (view: ViewMode) => {
     if (currentModule && currentView === 'audit') {
@@ -327,7 +338,7 @@ export function Sidebar() {
     setPendingModule(null)
   }
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
     logout()
     router.push('/login')
   }
@@ -459,7 +470,7 @@ export function Sidebar() {
           icon={<IconLogOut />}
           label="Sair"
           collapsed={collapsed}
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           accent="#ef4444"
         />
       </div>
@@ -473,6 +484,23 @@ export function Sidebar() {
         }}
         onConfirm={handleStartAudit}
       />
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar saída</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja realmente sair da sua conta? Você precisará fazer login novamente para acessar o sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLogout} className="bg-red-600 hover:bg-red-700">
+              Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   )
 }

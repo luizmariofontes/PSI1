@@ -7,9 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { getStatusLabel, getStatusColor } from '@/lib/audit-utils'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, FileText } from 'lucide-react'
 
 interface ControlCardProps {
   control: Control
@@ -47,21 +57,80 @@ export function ControlCard({
   }
 
   const [primaryChoice, setPrimaryChoice] = useState<PrimaryChoice>(derivePrimary(currentResponse?.status))
+  const [showInProgressQuestion, setShowInProgressQuestion] = useState(false)
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
+  const [detailsText, setDetailsText] = useState('')
+  const [detailsError, setDetailsError] = useState('')
+  const [advanceAfterDetails, setAdvanceAfterDetails] = useState(false)
 
   // Sincroniza estado local quando muda o controle exibido
   useEffect(() => {
     setPrimaryChoice(derivePrimary(currentResponse?.status))
+    setDetailsText(currentResponse?.inProgressDetails || '')
+    setDetailsError('')
+    setShowInProgressQuestion(false)
+    setShowDetailsDialog(false)
   }, [control.id, currentResponse?.status])
+
+  const advanceToNext = () => {
+    if (!isLast) {
+      window.setTimeout(onNext, 180)
+    }
+  }
 
   const handlePrimaryChange = (choice: PrimaryChoice) => {
     setPrimaryChoice(choice)
 
-    if (choice === 'conforme' || choice === 'nao-conforme' || choice === 'nao-aplica') {
-      onResponseChange(choice)
+    if (choice === 'nao-conforme') {
+      setShowInProgressQuestion(true)
+      return
+    }
 
-      if (!isLast) {
-        window.setTimeout(onNext, 180)
-      }
+    if (choice === 'conforme' || choice === 'nao-aplica') {
+      onResponseChange(choice)
+      advanceToNext()
+    }
+  }
+
+  const resetPendingChoice = () => {
+    setPrimaryChoice(derivePrimary(currentResponse?.status))
+    setShowInProgressQuestion(false)
+  }
+
+  const handleNotInProgress = () => {
+    onResponseChange('nao-conforme')
+    setShowInProgressQuestion(false)
+    advanceToNext()
+  }
+
+  const handleAskDetails = () => {
+    setDetailsText(currentResponse?.inProgressDetails || '')
+    setDetailsError('')
+    setAdvanceAfterDetails(true)
+    setShowInProgressQuestion(false)
+    setShowDetailsDialog(true)
+  }
+
+  const handleEditDetails = () => {
+    setDetailsText(currentResponse?.inProgressDetails || '')
+    setDetailsError('')
+    setAdvanceAfterDetails(false)
+    setShowDetailsDialog(true)
+  }
+
+  const handleSaveDetails = () => {
+    const trimmed = detailsText.trim()
+    if (!trimmed) {
+      setDetailsError('Descreva o que esta em andamento.')
+      return
+    }
+
+    setPrimaryChoice('nao-conforme')
+    onResponseChange('em-andamento', trimmed)
+    setShowDetailsDialog(false)
+
+    if (advanceAfterDetails) {
+      advanceToNext()
     }
   }
 
@@ -80,9 +149,23 @@ export function ControlCard({
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
         <div className="flex items-center justify-between mb-2">
-          <Badge variant="outline" className="text-xs">
-            {control.category}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {control.category}
+            </Badge>
+            {currentResponse?.status === 'em-andamento' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleEditDetails}
+                className="h-7 rounded-full px-3 text-xs"
+              >
+                <FileText className="mr-1.5 h-3.5 w-3.5" />
+                Em andamento
+              </Button>
+            )}
+          </div>
           <span className="text-sm text-slate-500">
             {controlNumber} de {totalControls}
           </span>
@@ -141,6 +224,70 @@ export function ControlCard({
           )}
         </div>
       </CardContent>
+
+      <AlertDialog open={showInProgressQuestion} onOpenChange={(open) => {
+        if (!open) resetPendingChoice()
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Está em andamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este controle foi marcado como não conforme. Existe alguma ação em andamento para resolver este ponto?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={resetPendingChoice}>Cancelar</AlertDialogCancel>
+            <Button variant="outline" onClick={handleNotInProgress}>
+              Não
+            </Button>
+            <Button onClick={handleAskDetails} className="bg-blue-600 hover:bg-blue-700">
+              Sim
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDetailsDialog} onOpenChange={(open) => {
+        setShowDetailsDialog(open)
+        if (!open && advanceAfterDetails) {
+          setPrimaryChoice(derivePrimary(currentResponse?.status))
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>O que está em andamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Descreva o que já foi feito, o que ainda falta e qualquer contexto importante para acompanhar esta não conformidade.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Textarea
+              value={detailsText}
+              onChange={(event) => {
+                setDetailsText(event.target.value)
+                setDetailsError('')
+              }}
+              placeholder="Ex.: política revisada, aguardando aprovação da diretoria, pendente publicação e comunicação aos responsáveis."
+              className="min-h-32 resize-y"
+            />
+            {detailsError && (
+              <p className="text-sm text-red-600">{detailsError}</p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              if (advanceAfterDetails) {
+                setPrimaryChoice(derivePrimary(currentResponse?.status))
+              }
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <Button onClick={handleSaveDetails} className="bg-blue-600 hover:bg-blue-700">
+              Salvar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }
