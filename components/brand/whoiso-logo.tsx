@@ -5,18 +5,24 @@ interface WhoISOLogoProps {
   className?: string;
   markOnly?: boolean;
   inverse?: boolean;
+  mode?: "light" | "dark";
 }
 
 export function WhoISOLogo({
   className,
   markOnly = false,
   inverse = false,
+  mode = "light",
 }: WhoISOLogoProps) {
   const id = useId();
   const shieldGradientId = `whoiso-shield-${id}`;
   const accentGradientId = `whoiso-accent-${id}`;
   const textColor = inverse ? "#ffffff" : "#0f172a";
   const subtitleColor = inverse ? "#94a3b8" : "#64748b";
+  const shieldStartColor = mode === "dark" ? "#f8fafc" : "#0f172a";
+  const shieldEndColor = mode === "dark" ? "#cbd5e1" : "#334155";
+  const accentStartColor = mode === "dark" ? "#60a5fa" : "#3b82f6";
+  const accentEndColor = mode === "dark" ? "#22d3ee" : "#06b6d4";
 
   return (
     <svg
@@ -34,8 +40,8 @@ export function WhoISOLogo({
           x2="100%"
           y2="100%"
         >
-          <stop offset="0%" stopColor="#0f172a" stopOpacity="1" />
-          <stop offset="100%" stopColor="#334155" stopOpacity="1" />
+          <stop offset="0%" stopColor={shieldStartColor} stopOpacity="1" />
+          <stop offset="100%" stopColor={shieldEndColor} stopOpacity="1" />
         </linearGradient>
         <linearGradient
           id={accentGradientId}
@@ -44,8 +50,8 @@ export function WhoISOLogo({
           x2="100%"
           y2="100%"
         >
-          <stop offset="0%" stopColor="#3b82f6" stopOpacity="1" />
-          <stop offset="100%" stopColor="#06b6d4" stopOpacity="1" />
+          <stop offset="0%" stopColor={accentStartColor} stopOpacity="1" />
+          <stop offset="100%" stopColor={accentEndColor} stopOpacity="1" />
         </linearGradient>
       </defs>
       <path

@@ -26,6 +26,12 @@ interface AppContextType extends AppState {
   // Company actions
   login: (email: string, password: string) => boolean
   signup: (companyName: string, email: string, password: string) => boolean
+  updateAccount: (data: {
+    companyName: string
+    email: string
+    currentPassword?: string
+    newPassword?: string
+  }) => { success: boolean; error?: string }
   logout: () => void
   
   // Audit actions
@@ -198,6 +204,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }
 
+  const updateAccount: AppContextType['updateAccount'] = ({
+    companyName,
+    email,
+    currentPassword,
+    newPassword,
+  }) => {
+    if (!state.currentCompany) {
+      return { success: false, error: 'Sessão não encontrada.' }
+    }
+
+    const trimmedName = companyName.trim()
+    const normalizedEmail = email.trim().toLowerCase()
+    const trimmedPassword = newPassword?.trim() || ''
+
+    if (!trimmedName || !normalizedEmail) {
+      return { success: false, error: 'Informe nome da empresa e email.' }
+    }
+
+    const emailOwner = state.companies.find(company =>
+      company.email.toLowerCase() === normalizedEmail && company.id !== state.currentCompany!.id
+    )
+
+    if (emailOwner) {
+      return { success: false, error: 'Este email ja esta em uso.' }
+    }
+
+    if (trimmedPassword) {
+      if (currentPassword !== state.currentCompany.password) {
+        return { success: false, error: 'Senha atual incorreta.' }
+      }
+
+      if (trimmedPassword.length < 6) {
+        return { success: false, error: 'A nova senha deve ter pelo menos 6 caracteres.' }
+      }
+    }
+
+    const previousCompanyName = state.currentCompany.name
+    const updatedCompany: Company = {
+      ...state.currentCompany,
+      name: trimmedName,
+      email: normalizedEmail,
+      password: trimmedPassword || state.currentCompany.password,
+    }
+
+    setState(prev => ({
+      ...prev,
+      currentCompany: updatedCompany,
+      companies: prev.companies.map(company => company.id === updatedCompany.id ? updatedCompany : company),
+      audits: prev.audits.map(audit =>
+        audit.companyName === previousCompanyName
+          ? { ...audit, companyName: updatedCompany.name }
+          : audit,
+      ),
+    }))
+
+    return { success: true }
+  }
+
   const selectModule = (module: 'iso27001' | 'iso27701') => {
     setState(prev => ({
       ...prev,
@@ -349,6 +413,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...state,
         login,
         signup,
+        updateAccount,
         logout,
         selectModule,
         editAudit,

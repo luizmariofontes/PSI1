@@ -51,6 +51,6 @@ export interface CategoryStats {
   stats: AuditStats
 }
 
-export type ViewMode = 'login' | 'dashboard' | 'audit' | 'history'
+export type ViewMode = 'login' | 'dashboard' | 'audit' | 'history' | 'account'
 
 export type DashboardMode = 'current' | 'comparative'

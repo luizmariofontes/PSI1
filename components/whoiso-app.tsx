@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layouts/sidebar";
 import { AuditPage } from "@/components/audit/audit-page";
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
 import { HistoryPage } from "@/components/history/history-page";
+import { AccountPage } from "@/components/account/account-page";
 
 export function WhoISOApp() {
   const { currentView } = useApp();
@@ -24,6 +25,7 @@ export function WhoISOApp() {
         {currentView === "dashboard" && <DashboardPage />}
         {currentView === "audit" && <AuditPage />}
         {currentView === "history" && <HistoryPage />}
+        {currentView === "account" && <AccountPage />}
       </main>
     </div>
   );

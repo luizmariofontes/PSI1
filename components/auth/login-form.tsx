@@ -39,7 +39,7 @@ export function LoginForm() {
     <div className="grid min-h-screen bg-white md:grid-cols-[1.06fr_0.94fr]">
       <section className="hidden min-h-screen flex-col justify-between bg-[#0f172a] px-12 py-10 text-white lg:px-16 md:flex">
         <div>
-          <WhoISOLogo inverse className="w-48" />
+          <WhoISOLogo inverse mode="dark" className="w-48" />
 
           <div className="mt-20 max-w-xl">
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-300">Acesso seguro</p>

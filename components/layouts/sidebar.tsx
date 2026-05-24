@@ -128,6 +128,36 @@ function IconHistory({ size = 20 }: { size?: number }) {
   )
 }
 
+function IconSettings({ size = 20 }: { size?: number }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="itshover-settings"
+      style={{ overflow: 'visible' }}
+    >
+      <style>{`
+        .itshover-settings:hover .settings-gear { animation: gear-turn 0.55s ease; }
+        @keyframes gear-turn { from{transform:rotate(0deg)} to{transform:rotate(45deg)} }
+      `}</style>
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path
+        className="settings-gear"
+        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06 .06a2 2 0 1 1 -2.83 2.83l-.06 -.06a1.65 1.65 0 0 0 -1.82 -.33a1.65 1.65 0 0 0 -1 1.51v.17a2 2 0 1 1 -4 0v-.09a1.65 1.65 0 0 0 -1 -1.51a1.65 1.65 0 0 0 -1.82 .33l-.06 .06a2 2 0 1 1 -2.83 -2.83l.06 -.06a1.65 1.65 0 0 0 .33 -1.82a1.65 1.65 0 0 0 -1.51 -1h-.17a2 2 0 1 1 0 -4h.09a1.65 1.65 0 0 0 1.51 -1a1.65 1.65 0 0 0 -.33 -1.82l-.06 -.06a2 2 0 1 1 2.83 -2.83l.06 .06a1.65 1.65 0 0 0 1.82 .33h.09a1.65 1.65 0 0 0 1 -1.51v-.17a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51a1.65 1.65 0 0 0 1.82 -.33l.06 -.06a2 2 0 1 1 2.83 2.83l-.06 .06a1.65 1.65 0 0 0 -.33 1.82v.09a1.65 1.65 0 0 0 1.51 1h.17a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0 -1.51 1z"
+        style={{ transformOrigin: '12px 12px' }}
+      />
+      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+    </svg>
+  )
+}
+
 function IconLogOut({ size = 20 }: { size?: number }) {
   return (
     <svg
@@ -329,9 +359,9 @@ export function Sidebar() {
       >
         <div className="flex min-w-0 items-center">
           {collapsed ? (
-            <WhoISOLogo markOnly className="w-9 flex-shrink-0" />
+            <WhoISOLogo markOnly mode="dark" className="w-9 flex-shrink-0" />
           ) : (
-            <WhoISOLogo inverse className="w-36" />
+            <WhoISOLogo inverse mode="dark" className="w-36" />
           )}
         </div>
 
@@ -417,6 +447,14 @@ export function Sidebar() {
         className="flex-shrink-0 px-2 py-3"
         style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
       >
+        <NavItem
+          icon={<IconSettings />}
+          label="Configurações"
+          active={currentView === 'account'}
+          collapsed={collapsed}
+          onClick={() => navigate('account')}
+          accent="#3b82f6"
+        />
         <NavItem
           icon={<IconLogOut />}
           label="Sair"
