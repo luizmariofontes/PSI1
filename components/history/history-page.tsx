@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useApp } from '@/lib/app-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,14 @@ export function HistoryPage() {
     setView,
     editAudit,
     loadAuditLogs,
+    refreshAudits,
   } = useApp()
+
+  // Sempre que o usuario abre o Historico, refazemos a busca para que
+  // alteracoes feitas por outros membros da empresa fiquem visiveis.
+  useEffect(() => {
+    void refreshAudits()
+  }, [refreshAudits])
 
   const allAudits = getCompanyAudits()
 
@@ -27,8 +35,8 @@ export function HistoryPage() {
     setView('dashboard')
   }
 
-  const handleEditAudit = (auditId: string) => {
-    editAudit(auditId)
+  const handleEditAudit = async (auditId: string) => {
+    await editAudit(auditId)
   }
 
   const handleViewLogs = (auditId: string) => {

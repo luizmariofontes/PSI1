@@ -23,12 +23,17 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/osutils"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
+const maxEvidenceFileSize = 5 * 1024 * 1024 // 5MB
+
 type signupRequest struct {
+	Mode        string `json:"mode"` // "user" ou "company" (default: "company")
 	CompanyName string `json:"companyName"`
+	Name        string `json:"name"`
 	Email       string `json:"email"`
 	Password    string `json:"password"`
 }
@@ -59,8 +64,32 @@ type auditRequest struct {
 type authUserResponse struct {
 	ID          string `json:"id"`
 	CompanyName string `json:"companyName"`
+	CompanyID   string `json:"companyId"`
 	Email       string `json:"email"`
 	CreatedAt   string `json:"createdAt"`
+}
+
+type companyMemberResponse struct {
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	IsOwner   bool   `json:"isOwner"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type companyResponse struct {
+	ID        string                  `json:"id"`
+	Name      string                  `json:"name"`
+	OwnerID   string                  `json:"ownerId"`
+	CreatedAt string                  `json:"createdAt"`
+	Members   []companyMemberResponse `json:"members"`
+}
+
+type companyUpdateRequest struct {
+	Name string `json:"name"`
+}
+
+type companyInviteRequest struct {
+	Email string `json:"email"`
 }
 
 type authResponse struct {
@@ -121,6 +150,15 @@ func main() {
 		group.POST("/audits", handleCreateAudit).Bind(apis.RequireAuth("users"))
 		group.PUT("/audits/{id}", handleUpdateAudit).Bind(apis.RequireAuth("users"))
 		group.GET("/audits/{id}/logs", handleAuditLogs).Bind(apis.RequireAuth("users"))
+		group.GET("/company", handleGetCompany).Bind(apis.RequireAuth("users"))
+		group.PATCH("/company", handleRenameCompany).Bind(apis.RequireAuth("users"))
+		group.POST("/company/invite", handleInviteMember).Bind(apis.RequireAuth("users"))
+		group.DELETE("/company/members/{id}", handleRemoveMember).Bind(apis.RequireAuth("users"))
+		group.POST("/audits/{id}/evidences", handleUploadEvidence).Bind(apis.RequireAuth("users"))
+		// Sem RequireAuth: o handler aceita token via query string para suportar
+		// downloads abertos diretamente em uma nova aba via <a href>.
+		group.GET("/evidences/{id}", handleDownloadEvidence)
+		group.DELETE("/evidences/{id}", handleDeleteEvidence).Bind(apis.RequireAuth("users"))
 
 		return se.Next()
 	})
@@ -157,11 +195,23 @@ func handleSignup(e *core.RequestEvent) error {
 		return e.BadRequestError("Dados invalidos.", err)
 	}
 
+	mode := strings.ToLower(strings.TrimSpace(data.Mode))
+	if mode == "" {
+		mode = "company"
+	}
+	if mode != "user" && mode != "company" {
+		return e.BadRequestError("Modo de cadastro invalido.", nil)
+	}
+
 	data.CompanyName = strings.TrimSpace(data.CompanyName)
+	data.Name = strings.TrimSpace(data.Name)
 	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
 
-	if data.CompanyName == "" || data.Email == "" || data.Password == "" {
-		return e.BadRequestError("Informe nome da empresa, email e senha.", nil)
+	if data.Email == "" || data.Password == "" {
+		return e.BadRequestError("Informe email e senha.", nil)
+	}
+	if mode == "company" && data.CompanyName == "" {
+		return e.BadRequestError("Informe o nome da empresa.", nil)
 	}
 
 	if len(data.Password) < 6 {
@@ -181,15 +231,44 @@ func handleSignup(e *core.RequestEvent) error {
 	record.SetEmail(data.Email)
 	record.SetPassword(data.Password)
 	record.SetVerified(false)
-	record.Set("companyName", data.CompanyName)
+	// `companyName` no usuario eh apenas um nome de exibicao fallback
+	if mode == "company" {
+		record.Set("companyName", data.CompanyName)
+	} else if data.Name != "" {
+		record.Set("companyName", data.Name)
+	} else {
+		record.Set("companyName", data.Email)
+	}
+	if data.Name != "" {
+		record.Set("name", data.Name)
+	}
 
 	if err := e.App.Save(record); err != nil {
 		return e.BadRequestError("Nao foi possivel criar o usuario.", err)
 	}
 
+	var company *core.Record
+	if mode == "company" {
+		company, err = createCompanyForUser(e, record, data.CompanyName)
+		if err != nil {
+			_ = e.App.Delete(record)
+			return e.InternalServerError("Nao foi possivel criar a empresa.", err)
+		}
+
+		record.Set("company", company.Id)
+		if err := e.App.Save(record); err != nil {
+			_ = e.App.Delete(company)
+			_ = e.App.Delete(record)
+			return e.InternalServerError("Nao foi possivel vincular a empresa ao usuario.", err)
+		}
+	}
+
 	challenge, err := issueOTP(e, record, "signup")
 	if err != nil {
 		_ = e.App.Delete(record)
+		if company != nil {
+			_ = e.App.Delete(company)
+		}
 		return e.InternalServerError("Nao foi possivel enviar o codigo de verificacao.", err)
 	}
 
@@ -279,11 +358,11 @@ func handleVerifyOTP(e *core.RequestEvent) error {
 		return e.InternalServerError("Nao foi possivel autenticar o usuario.", err)
 	}
 
-	return e.JSON(http.StatusOK, authResponse{Token: token, User: newAuthUserResponse(user)})
+	return e.JSON(http.StatusOK, authResponse{Token: token, User: newAuthUserResponse(e.App, user)})
 }
 
 func handleMe(e *core.RequestEvent) error {
-	return e.JSON(http.StatusOK, newAuthUserResponse(e.Auth))
+	return e.JSON(http.StatusOK, newAuthUserResponse(e.App, e.Auth))
 }
 
 func issueOTP(e *core.RequestEvent, user *core.Record, purpose string) (authChallengeResponse, error) {
@@ -377,7 +456,10 @@ func hashOTP(code string, challengeID string, email string, purpose string) stri
 func sendOTPEmail(to string, companyName string, purpose string, code string) error {
 	apiKey := os.Getenv("RESEND_API_KEY")
 	if apiKey == "" {
-		return fmt.Errorf("RESEND_API_KEY nao configurada")
+		// Fallback de desenvolvimento: imprime o OTP no log para que o auditor
+		// consiga testar o fluxo localmente sem configurar a Resend.
+		log.Printf("[DEV-OTP] empresa=%q destinatario=%s motivo=%s codigo=%s", companyName, to, purpose, code)
+		return nil
 	}
 
 	subject := "Seu codigo WhoISO"
@@ -492,11 +574,14 @@ func handleUpdateAccount(e *core.RequestEvent) error {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	newPassword := strings.TrimSpace(req.NewPassword)
 
-	if companyName == "" || email == "" {
-		return e.BadRequestError("Informe nome da empresa e email.", nil)
+	if email == "" {
+		return e.BadRequestError("Informe um email.", nil)
 	}
 
-	e.Auth.Set("companyName", companyName)
+	// companyName so eh atualizado quando informado (usuarios sem empresa nao enviam o campo)
+	if companyName != "" {
+		e.Auth.Set("companyName", companyName)
+	}
 	e.Auth.SetEmail(email)
 
 	if newPassword != "" {
@@ -513,17 +598,36 @@ func handleUpdateAccount(e *core.RequestEvent) error {
 		return e.BadRequestError("Nao foi possivel atualizar a conta.", err)
 	}
 
-	return e.JSON(http.StatusOK, newAuthUserResponse(e.Auth))
+	// Mantem o "nome de exibicao" sincronizado com a empresa caso o usuario seja o owner.
+	if companyID := e.Auth.GetString("company"); companyID != "" {
+		if company, err := e.App.FindRecordById("companies", companyID); err == nil {
+			if company.GetString("owner") == e.Auth.Id {
+				company.Set("name", companyName)
+				_ = e.App.Save(company)
+			}
+		}
+	}
+
+	return e.JSON(http.StatusOK, newAuthUserResponse(e.App, e.Auth))
 }
 
 func handleListAudits(e *core.RequestEvent) error {
+	companyID := e.Auth.GetString("company")
+
+	filter := "user = {:user}"
+	params := dbx.Params{"user": e.Auth.Id}
+	if companyID != "" {
+		filter = "company = {:company}"
+		params = dbx.Params{"company": companyID}
+	}
+
 	records, err := e.App.FindRecordsByFilter(
 		"audits",
-		"user = {:user}",
+		filter,
 		"-created",
 		0,
 		0,
-		dbx.Params{"user": e.Auth.Id},
+		params,
 	)
 	if err != nil {
 		return err
@@ -557,9 +661,18 @@ func handleCreateAudit(e *core.RequestEvent) error {
 		return err
 	}
 
+	companyID := e.Auth.GetString("company")
+	companyName := e.Auth.GetString("companyName")
+	if companyID != "" {
+		if companyRecord, err := e.App.FindRecordById("companies", companyID); err == nil {
+			companyName = companyRecord.GetString("name")
+		}
+	}
+
 	audit.Set("user", e.Auth.Id)
 	audit.Set("auditNumber", auditNumber)
-	audit.Set("companyName", e.Auth.GetString("companyName"))
+	audit.Set("companyName", companyName)
+	audit.Set("company", companyID)
 	audit.Set("module", req.Module)
 	audit.Set("auditDate", req.AuditDate)
 	audit.Set("responses", req.Responses)
@@ -584,7 +697,7 @@ func handleUpdateAudit(e *core.RequestEvent) error {
 	}
 
 	audit, err := e.App.FindRecordById("audits", e.Request.PathValue("id"))
-	if err != nil || audit.GetString("user") != e.Auth.Id {
+	if err != nil || !canAccessAudit(e, audit) {
 		return e.NotFoundError("Auditoria nao encontrada.", err)
 	}
 
@@ -605,17 +718,17 @@ func handleUpdateAudit(e *core.RequestEvent) error {
 
 func handleAuditLogs(e *core.RequestEvent) error {
 	audit, err := e.App.FindRecordById("audits", e.Request.PathValue("id"))
-	if err != nil || audit.GetString("user") != e.Auth.Id {
+	if err != nil || !canAccessAudit(e, audit) {
 		return e.NotFoundError("Auditoria nao encontrada.", err)
 	}
 
 	records, err := e.App.FindRecordsByFilter(
 		"audit_logs",
-		"audit = {:audit} && user = {:user}",
+		"audit = {:audit}",
 		"created",
 		0,
 		0,
-		dbx.Params{"audit": audit.Id, "user": e.Auth.Id},
+		dbx.Params{"audit": audit.Id},
 	)
 	if err != nil {
 		return err
@@ -643,13 +756,21 @@ func validateAuditRequest(req auditRequest) error {
 }
 
 func nextAuditNumber(e *core.RequestEvent) (int, error) {
+	companyID := e.Auth.GetString("company")
+	filter := "user = {:user}"
+	params := dbx.Params{"user": e.Auth.Id}
+	if companyID != "" {
+		filter = "company = {:company}"
+		params = dbx.Params{"company": companyID}
+	}
+
 	records, err := e.App.FindRecordsByFilter(
 		"audits",
-		"user = {:user}",
+		filter,
 		"-auditNumber",
 		1,
 		0,
-		dbx.Params{"user": e.Auth.Id},
+		params,
 	)
 	if err != nil {
 		return 0, err
@@ -737,10 +858,18 @@ func hashAuditPayload(payload auditHashPayload) (string, types.JSONRaw, error) {
 	return hex.EncodeToString(sum[:]), types.JSONRaw(raw), nil
 }
 
-func newAuthUserResponse(record *core.Record) authUserResponse {
+func newAuthUserResponse(app core.App, record *core.Record) authUserResponse {
+	companyID := record.GetString("company")
+	companyName := record.GetString("companyName")
+	if app != nil && companyID != "" {
+		if company, err := app.FindRecordById("companies", companyID); err == nil {
+			companyName = company.GetString("name")
+		}
+	}
 	return authUserResponse{
 		ID:          record.Id,
-		CompanyName: record.GetString("companyName"),
+		CompanyName: companyName,
+		CompanyID:   companyID,
 		Email:       record.Email(),
 		CreatedAt:   record.GetDateTime("created").String(),
 	}
@@ -786,4 +915,375 @@ type errMessage string
 
 func (e errMessage) Error() string {
 	return string(e)
+}
+
+func createCompanyForUser(e *core.RequestEvent, user *core.Record, name string) (*core.Record, error) {
+	collection, err := e.App.FindCollectionByNameOrId("companies")
+	if err != nil {
+		return nil, err
+	}
+
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		trimmed = "Empresa de " + user.Email()
+	}
+
+	company := core.NewRecord(collection)
+	company.Set("name", trimmed)
+	company.Set("owner", user.Id)
+	company.Set("members", []string{user.Id})
+
+	if err := e.App.Save(company); err != nil {
+		return nil, err
+	}
+	return company, nil
+}
+
+// canAccessAudit verifica se o usuario autenticado pode ver/editar uma auditoria
+// (criador, ou membro da mesma empresa).
+func canAccessAudit(e *core.RequestEvent, audit *core.Record) bool {
+	if audit.GetString("user") == e.Auth.Id {
+		return true
+	}
+	companyID := audit.GetString("company")
+	if companyID == "" || companyID != e.Auth.GetString("company") {
+		return false
+	}
+	return true
+}
+
+func loadCompanyForAuth(e *core.RequestEvent) (*core.Record, error) {
+	companyID := e.Auth.GetString("company")
+	if companyID == "" {
+		return nil, errMessage("Usuario nao esta vinculado a uma empresa.")
+	}
+	company, err := e.App.FindRecordById("companies", companyID)
+	if err != nil {
+		return nil, err
+	}
+	return company, nil
+}
+
+func newCompanyResponse(app core.App, company *core.Record) companyResponse {
+	memberIDs := company.GetStringSlice("members")
+	members := make([]companyMemberResponse, 0, len(memberIDs))
+	ownerID := company.GetString("owner")
+
+	for _, id := range memberIDs {
+		member, err := app.FindRecordById("users", id)
+		if err != nil {
+			continue
+		}
+		members = append(members, companyMemberResponse{
+			ID:        member.Id,
+			Email:     member.Email(),
+			IsOwner:   member.Id == ownerID,
+			CreatedAt: member.GetDateTime("created").String(),
+		})
+	}
+
+	return companyResponse{
+		ID:        company.Id,
+		Name:      company.GetString("name"),
+		OwnerID:   ownerID,
+		CreatedAt: company.GetDateTime("created").String(),
+		Members:   members,
+	}
+}
+
+func handleGetCompany(e *core.RequestEvent) error {
+	company, err := loadCompanyForAuth(e)
+	if err != nil {
+		return e.NotFoundError("Empresa nao encontrada.", err)
+	}
+	return e.JSON(http.StatusOK, newCompanyResponse(e.App, company))
+}
+
+func handleRenameCompany(e *core.RequestEvent) error {
+	var req companyUpdateRequest
+	if err := e.BindBody(&req); err != nil {
+		return e.BadRequestError("Dados invalidos.", err)
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return e.BadRequestError("Informe o nome da empresa.", nil)
+	}
+
+	company, err := loadCompanyForAuth(e)
+	if err != nil {
+		return e.NotFoundError("Empresa nao encontrada.", err)
+	}
+	if company.GetString("owner") != e.Auth.Id {
+		return e.ForbiddenError("Apenas o proprietario pode renomear a empresa.", nil)
+	}
+
+	company.Set("name", name)
+	if err := e.App.Save(company); err != nil {
+		return e.BadRequestError("Nao foi possivel atualizar a empresa.", err)
+	}
+
+	return e.JSON(http.StatusOK, newCompanyResponse(e.App, company))
+}
+
+func handleInviteMember(e *core.RequestEvent) error {
+	var req companyInviteRequest
+	if err := e.BindBody(&req); err != nil {
+		return e.BadRequestError("Dados invalidos.", err)
+	}
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if email == "" {
+		return e.BadRequestError("Informe um email.", nil)
+	}
+
+	company, err := loadCompanyForAuth(e)
+	if err != nil {
+		return e.NotFoundError("Empresa nao encontrada.", err)
+	}
+	if company.GetString("owner") != e.Auth.Id {
+		return e.ForbiddenError("Apenas o proprietario pode adicionar membros.", nil)
+	}
+
+	invitee, err := e.App.FindAuthRecordByEmail("users", email)
+	if err != nil || invitee == nil {
+		return e.BadRequestError("Usuario nao encontrado. Peca para a pessoa criar uma conta primeiro.", err)
+	}
+
+	// Se o usuario ja era de outra empresa, removemos a referencia anterior antes de movê-lo.
+	if previousID := invitee.GetString("company"); previousID != "" && previousID != company.Id {
+		if previous, err := e.App.FindRecordById("companies", previousID); err == nil {
+			previousMembers := filterStringSlice(previous.GetStringSlice("members"), invitee.Id)
+			previous.Set("members", previousMembers)
+			_ = e.App.Save(previous)
+		}
+	}
+
+	members := company.GetStringSlice("members")
+	if !containsString(members, invitee.Id) {
+		members = append(members, invitee.Id)
+		company.Set("members", members)
+		if err := e.App.Save(company); err != nil {
+			return e.BadRequestError("Nao foi possivel adicionar o membro.", err)
+		}
+	}
+
+	invitee.Set("company", company.Id)
+	if err := e.App.Save(invitee); err != nil {
+		return e.BadRequestError("Nao foi possivel atualizar o membro.", err)
+	}
+
+	return e.JSON(http.StatusOK, newCompanyResponse(e.App, company))
+}
+
+func handleRemoveMember(e *core.RequestEvent) error {
+	memberID := e.Request.PathValue("id")
+	if memberID == "" {
+		return e.BadRequestError("Informe o id do membro.", nil)
+	}
+
+	company, err := loadCompanyForAuth(e)
+	if err != nil {
+		return e.NotFoundError("Empresa nao encontrada.", err)
+	}
+	isOwner := company.GetString("owner") == e.Auth.Id
+	if !isOwner && memberID != e.Auth.Id {
+		return e.ForbiddenError("Sem permissao para remover este membro.", nil)
+	}
+	if memberID == company.GetString("owner") {
+		return e.BadRequestError("O proprietario nao pode ser removido.", nil)
+	}
+
+	members := filterStringSlice(company.GetStringSlice("members"), memberID)
+	company.Set("members", members)
+	if err := e.App.Save(company); err != nil {
+		return e.BadRequestError("Nao foi possivel remover o membro.", err)
+	}
+
+	if member, err := e.App.FindRecordById("users", memberID); err == nil {
+		if member.GetString("company") == company.Id {
+			member.Set("company", "")
+			_ = e.App.Save(member)
+		}
+	}
+
+	return e.JSON(http.StatusOK, newCompanyResponse(e.App, company))
+}
+
+type evidenceResponse struct {
+	ID        string `json:"id"`
+	AuditID   string `json:"auditId"`
+	ControlID string `json:"controlId"`
+	FileName  string `json:"fileName"`
+	Size      int64  `json:"size"`
+	CreatedAt string `json:"createdAt"`
+}
+
+func newEvidenceResponse(app core.App, record *core.Record) evidenceResponse {
+	fileName := record.GetString("file")
+	var size int64
+	if fileName != "" {
+		if fsys, err := app.NewFilesystem(); err == nil {
+			defer fsys.Close()
+			key := record.BaseFilesPath() + "/" + fileName
+			if attrs, err := fsys.Attributes(key); err == nil {
+				size = attrs.Size
+			}
+		}
+	}
+	return evidenceResponse{
+		ID:        record.Id,
+		AuditID:   record.GetString("audit"),
+		ControlID: record.GetString("controlId"),
+		FileName:  fileName,
+		Size:      size,
+		CreatedAt: record.GetDateTime("created").String(),
+	}
+}
+
+func handleUploadEvidence(e *core.RequestEvent) error {
+	auditID := e.Request.PathValue("id")
+	audit, err := e.App.FindRecordById("audits", auditID)
+	if err != nil || !canAccessAudit(e, audit) {
+		return e.NotFoundError("Auditoria nao encontrada.", err)
+	}
+
+	// limita o tamanho da requisicao a 5MB + buffer pequeno para campos do form
+	e.Request.Body = http.MaxBytesReader(e.Response, e.Request.Body, maxEvidenceFileSize+512*1024)
+	if err := e.Request.ParseMultipartForm(maxEvidenceFileSize); err != nil {
+		return e.BadRequestError("Arquivo invalido ou maior que 5MB.", err)
+	}
+
+	controlID := strings.TrimSpace(e.Request.FormValue("controlId"))
+	if controlID == "" {
+		return e.BadRequestError("controlId obrigatorio.", nil)
+	}
+
+	file, header, err := e.Request.FormFile("file")
+	if err != nil {
+		return e.BadRequestError("Arquivo obrigatorio.", err)
+	}
+	file.Close()
+	if header.Size > maxEvidenceFileSize {
+		return e.BadRequestError("Arquivo excede o limite de 5MB.", nil)
+	}
+
+	uploaded, err := filesystem.NewFileFromMultipart(header)
+	if err != nil {
+		return e.BadRequestError("Nao foi possivel processar o arquivo.", err)
+	}
+
+	collection, err := e.App.FindCollectionByNameOrId("audit_evidences")
+	if err != nil {
+		return e.InternalServerError("Colecao de evidencias indisponivel.", err)
+	}
+
+	record := core.NewRecord(collection)
+	record.Set("user", e.Auth.Id)
+	record.Set("audit", audit.Id)
+	record.Set("controlId", controlID)
+	record.Set("file", uploaded)
+
+	if err := e.App.Save(record); err != nil {
+		return e.BadRequestError("Nao foi possivel salvar a evidencia.", err)
+	}
+
+	return e.JSON(http.StatusCreated, newEvidenceResponse(e.App, record))
+}
+
+func handleDownloadEvidence(e *core.RequestEvent) error {
+	// Aceita token via header Authorization ou via query string (?token=...),
+	// para permitir downloads em nova aba via <a href>.
+	auth, err := resolveAuthForDownload(e)
+	if err != nil || auth == nil {
+		return e.UnauthorizedError("Token invalido ou ausente.", err)
+	}
+
+	record, err := e.App.FindRecordById("audit_evidences", e.Request.PathValue("id"))
+	if err != nil {
+		return e.NotFoundError("Evidencia nao encontrada.", err)
+	}
+	audit, err := e.App.FindRecordById("audits", record.GetString("audit"))
+	if err != nil {
+		return e.NotFoundError("Evidencia nao encontrada.", err)
+	}
+	if !canAccessAuditAs(auth, audit) {
+		return e.NotFoundError("Evidencia nao encontrada.", nil)
+	}
+
+	fileName := record.GetString("file")
+	if fileName == "" {
+		return e.NotFoundError("Arquivo ausente.", nil)
+	}
+
+	fsys, err := e.App.NewFilesystem()
+	if err != nil {
+		return e.InternalServerError("Storage indisponivel.", err)
+	}
+	defer fsys.Close()
+
+	key := record.BaseFilesPath() + "/" + fileName
+	return fsys.Serve(e.Response, e.Request, key, fileName)
+}
+
+// resolveAuthForDownload extrai e valida o JWT a partir do header Authorization
+// ou do parametro de query ?token=. Retorna o registro de usuario autenticado.
+func resolveAuthForDownload(e *core.RequestEvent) (*core.Record, error) {
+	token := ""
+	if header := e.Request.Header.Get("Authorization"); strings.HasPrefix(header, "Bearer ") {
+		token = strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+	}
+	if token == "" {
+		token = e.Request.URL.Query().Get("token")
+	}
+	if token == "" {
+		return nil, errMessage("Token ausente.")
+	}
+	return e.App.FindAuthRecordByToken(token, core.TokenTypeAuth)
+}
+
+// canAccessAuditAs eh uma variante de canAccessAudit que recebe o usuario
+// explicitamente (em vez de ler de e.Auth), util para handlers que fazem
+// autenticacao manual.
+func canAccessAuditAs(user *core.Record, audit *core.Record) bool {
+	if audit.GetString("user") == user.Id {
+		return true
+	}
+	companyID := audit.GetString("company")
+	if companyID == "" || companyID != user.GetString("company") {
+		return false
+	}
+	return true
+}
+
+func handleDeleteEvidence(e *core.RequestEvent) error {
+	record, err := e.App.FindRecordById("audit_evidences", e.Request.PathValue("id"))
+	if err != nil {
+		return e.NotFoundError("Evidencia nao encontrada.", err)
+	}
+	audit, err := e.App.FindRecordById("audits", record.GetString("audit"))
+	if err != nil || !canAccessAudit(e, audit) {
+		return e.NotFoundError("Evidencia nao encontrada.", err)
+	}
+	if err := e.App.Delete(record); err != nil {
+		return e.BadRequestError("Nao foi possivel remover a evidencia.", err)
+	}
+	return e.NoContent(http.StatusNoContent)
+}
+
+func containsString(values []string, target string) bool {
+	for _, v := range values {
+		if v == target {
+			return true
+		}
+	}
+	return false
+}
+
+func filterStringSlice(values []string, target string) []string {
+	result := make([]string, 0, len(values))
+	for _, v := range values {
+		if v != target {
+			result = append(result, v)
+		}
+	}
+	return result
 }

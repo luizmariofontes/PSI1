@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useApp } from '@/lib/app-context'
+import { mergeControlResponse, useApp } from '@/lib/app-context'
 import { iso27002Controls } from '@/lib/data/iso27002-controls'
 import { iso27701Controls } from '@/lib/data/iso27701-controls'
 import { ControlCard } from './control-card'
 import { ProgressBar } from './progress-bar'
 import { Button } from '@/components/ui/button'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Shield, Lock, ArrowLeft, Calendar } from 'lucide-react'
-import { ControlStatus } from '@/lib/types'
+import { Shield, Lock, ArrowLeft, Calendar, Check, RefreshCw } from 'lucide-react'
+import { ControlStatus, EvidenceFile } from '@/lib/types'
 import { formatAuditNumber, formatDate } from '@/lib/audit-utils'
 
 export function AuditPage() {
@@ -21,13 +21,26 @@ export function AuditPage() {
     getAuditById,
     setControlResponse,
     saveAudit,
+    syncAuditResponses,
+    editAudit,
     clearCurrentAudit,
     setView,
+    uploadEvidenceFile,
+    deleteEvidenceFile,
+    buildEvidenceDownloadUrl,
   } = useApp()
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showFinishDialog, setShowFinishDialog] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefresh = async () => {
+    if (!editingAuditId) return
+    setRefreshing(true)
+    await editAudit(editingAuditId)
+    setRefreshing(false)
+  }
 
   const controls = useMemo(() => {
     if (currentModule === 'iso27001') return iso27002Controls
@@ -41,8 +54,44 @@ export function AuditPage() {
 
   const handleResponseChange = (status: ControlStatus, inProgressDetails?: string) => {
     if (currentControl) {
-      setControlResponse(currentControl.id, status, inProgressDetails)
+      setControlResponse(currentControl.id, status, { inProgressDetails })
     }
+  }
+
+  // Auto-save de evidencia: alem de atualizar o estado local, persistimos no
+  // backend logo em seguida quando estamos em modo de edicao. Isso garante
+  // que outros membros da empresa vejam o anexo/descricao sem precisar
+  // esperar o "Finalizar Auditoria".
+  const handleEvidenceChange = (evidence: string) => {
+    if (!currentControl) return
+    const existing = currentResponses.find(r => r.controlId === currentControl.id)
+    const status: ControlStatus = existing?.status || 'pendente'
+    const nextResponses = mergeControlResponse(currentResponses, currentControl.id, status, { evidence })
+    setControlResponse(currentControl.id, status, { evidence })
+    if (editingAuditId) {
+      void syncAuditResponses(nextResponses)
+    }
+  }
+
+  const handleEvidenceFileChange = (evidenceFile: EvidenceFile | null) => {
+    if (!currentControl) return
+    const existing = currentResponses.find(r => r.controlId === currentControl.id)
+    const status: ControlStatus = existing?.status || 'pendente'
+    const nextResponses = mergeControlResponse(currentResponses, currentControl.id, status, { evidenceFile })
+    setControlResponse(currentControl.id, status, { evidenceFile })
+    if (editingAuditId) {
+      void syncAuditResponses(nextResponses)
+    }
+  }
+
+  const handleUploadEvidenceFile = async (file: File) => {
+    if (!editingAuditId) {
+      return {
+        success: false,
+        error: 'Salve a auditoria antes de anexar arquivos. Marque pelo menos um controle, finalize e depois edite para anexar evidencias.',
+      }
+    }
+    return uploadEvidenceFile(editingAuditId, currentControl!.id, file)
   }
 
   const handlePrevious = () => {
@@ -132,6 +181,18 @@ export function AuditPage() {
                     {formatAuditNumber(editingAudit.auditNumber)}
                   </div>
                 )}
+                {editingAuditId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    title="Atualizar para puxar alteracoes de outros membros da empresa"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                    Atualizar
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -152,14 +213,41 @@ export function AuditPage() {
           control={currentControl}
           currentResponse={currentResponse}
           onResponseChange={handleResponseChange}
+          onEvidenceChange={handleEvidenceChange}
+          onEvidenceFileChange={handleEvidenceFileChange}
+          onUploadEvidenceFile={handleUploadEvidenceFile}
+          onDeleteEvidenceFile={deleteEvidenceFile}
+          buildEvidenceDownloadUrl={buildEvidenceDownloadUrl}
           controlNumber={currentIndex + 1}
           totalControls={controls.length}
           onPrevious={handlePrevious}
           onNext={handleNext}
           isFirst={currentIndex === 0}
           isLast={currentIndex === controls.length - 1}
-          onFinish={handleFinish}
         />
+      </div>
+
+      {/* Botão flutuante de Finalizar - sempre visível no canto inferior direito.
+          Cinza ate todos os controles serem preenchidos; azul quando todos respondidos. */}
+      <div className="pointer-events-none fixed bottom-6 right-6 z-30">
+        <Button
+          onClick={handleFinish}
+          disabled={pendingCount > 0}
+          className={`pointer-events-auto h-12 rounded-xl px-5 font-semibold shadow-lg ${
+            pendingCount > 0
+              ? 'bg-slate-300 text-slate-600 hover:bg-slate-300 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+          title={pendingCount > 0 ? `Faltam ${pendingCount} controle(s) para finalizar` : 'Finalizar auditoria'}
+        >
+          <Check className="mr-2 h-4 w-4" />
+          Finalizar Auditoria
+          {pendingCount > 0 && (
+            <span className="ml-2 rounded-full bg-white/30 px-2 py-0.5 text-xs font-bold">
+              {pendingCount}
+            </span>
+          )}
+        </Button>
       </div>
 
       {/* Finish Dialog */}
