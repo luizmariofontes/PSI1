@@ -241,16 +241,7 @@ O catálogo de controles embutido na ferramenta reflete as **edições vigentes*
 </details>
 
 <details>
-<summary><strong>RNF05 - Performance e Tempo de Resposta</strong></summary>
-
-<br>
-
-Operações de leitura (carregamento de controles, exibição do dashboard, recuperação de histórico) devem responder em até **2 segundos** em carga típica. Operações de escrita (salvar ou editar auditoria) podem admitir até **3 segundos**, considerando a geração do hash e o registro do log.
-
-</details>
-
-<details>
-<summary><strong>RNF06 - Portabilidade e Implantação</strong></summary>
+<summary><strong>RNF05 - Portabilidade e Implantação</strong></summary>
 
 <br>
 
@@ -259,7 +250,7 @@ O sistema deve poder ser executado em **navegadores web modernos** sem dependên
 </details>
 
 <details>
-<summary><strong>RNF07 - Manutenibilidade</strong></summary>
+<summary><strong>RNF06 - Manutenibilidade</strong></summary>
 
 <br>
 
@@ -268,7 +259,7 @@ A separação clara entre o **catálogo de controles** (arquivos de dados normat
 </details>
 
 <details>
-<summary><strong>RNF08 - Auditabilidade</strong></summary>
+<summary><strong>RNF07 - Auditabilidade</strong></summary>
 
 <br>
 
@@ -277,16 +268,7 @@ Sendo a aplicação uma ferramenta de auditoria, o próprio sistema deve ser **a
 </details>
 
 <details>
-<summary><strong>RNF09 - Idioma e Localização</strong></summary>
-
-<br>
-
-A interface, o catálogo de controles e todos os textos do sistema devem estar em **português brasileiro**, refletindo a terminologia adotada pelas normas ABNT NBR e pela LGPD. Exemplos: "dados pessoais" em vez de "PII", "operador" e "controlador" em vez de "processor" e "controller".
-
-</details>
-
-<details>
-<summary><strong>RNF10 - Privacidade dos Dados de Auditoria</strong></summary>
+<summary><strong>RNF08 - Privacidade dos Dados de Auditoria</strong></summary>
 
 <br>
 
