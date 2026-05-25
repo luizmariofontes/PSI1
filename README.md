@@ -191,6 +191,24 @@ O sistema deve permitir que o usuário autenticado atualize os dados de sua cont
 
 </details>
 
+<details>
+<summary><strong>RF17 - Anexação de Arquivo de Evidência por Controle</strong></summary>
+
+<br>
+
+O sistema deve permitir que o auditor anexe, a qualquer controle de uma auditoria em edição, **um arquivo de até 5 MB** como evidência complementar à observação textual. O arquivo é armazenado em coleção dedicada (`audit_evidences`) e permanece acessível para download ou remoção enquanto a auditoria existir. O limite de tamanho é validado em **duas camadas**: no cliente, antes do envio, para feedback imediato ao usuário; e no backend, via `MaxBytesReader` combinado com validação do tamanho declarado, rejeitando arquivos excedentes antes de gravá-los.
+
+</details>
+
+<details>
+<summary><strong>RF18 - Modalidades de Cadastro: Empresa e Usuário</strong></summary>
+
+<br>
+
+A tela de cadastro deve oferecer ao visitante a alternância entre dois modos mutuamente exclusivos: **cadastro de empresa** (cria a organização e vincula o e-mail informado como proprietário, exigindo nome da empresa, e-mail e senha) e **cadastro de usuário** (cria apenas a conta individual, sem organização associada, exigindo somente e-mail e senha). Em ambos os modos, a confirmação por **OTP de 6 dígitos** enviado ao e-mail é obrigatória antes da emissão do token JWT e liberação do acesso.
+
+</details>
+
 ---
 
 ## Requisitos Não Funcionais
@@ -276,6 +294,15 @@ Os dados de auditoria, embora não sejam dados pessoais em sentido estrito, pode
 
 </details>
 
+<details>
+<summary><strong>RNF09 - Autenticação Dual no Download de Evidências</strong></summary>
+
+<br>
+
+O endpoint `GET /api/whoiso/evidences/{id}` deve aceitar autenticação tanto via header `Authorization: Bearer <jwt>` (uso programático) quanto via parâmetro de consulta `?token=<jwt>` (downloads abertos diretamente em nova aba por `<a href>`, contexto em que o navegador não permite anexar headers customizados). A validação é realizada pelo próprio handler — token ausente ou inválido devolve **HTTP 401** independentemente da forma de envio — sem expor caminhos públicos. Esse mecanismo preserva a **confidencialidade das evidências** sem degradar a experiência de download no navegador.
+
+</details>
+
 ---
 
 ## Arquitetura Conceitual
@@ -294,49 +321,63 @@ A separação entre **módulos** (27001 e 27701) e **categorias de controle** (t
 
 ### Diagrama de Casos de Uso
 
-Apresenta as interações entre o ator principal (**Auditor**) e as funcionalidades do sistema.
+Apresenta as interações entre os atores e as funcionalidades do sistema. Um segundo ator, **Administrador**, representa o *owner* da empresa - único com permissão para convidar e remover membros.
 
 ```mermaid
 flowchart LR
     Auditor(("👤\nAuditor"))
-
+    Admin(("👑\nAdministrador\nda Empresa"))
+ 
     subgraph SISTEMA["Sistema de Diagnóstico de Conformidade"]
         UC0(["Autenticar-se\n(Login / Cadastro + OTP)"])
         UC1(["Selecionar Módulo\n(27001 / 27701)"])
         UC2(["Iniciar Nova Auditoria"])
         UC3(["Classificar Controle"])
         UC4(["Registrar Status\nEm Andamento"])
+        UC_EV(["Anexar Evidência\nao Controle"])
         UC5(["Visualizar Dashboard"])
         UC6(["Visualizar Comparativo"])
-        UC7(["Consultar Histórico"])
+        UC7(["Consultar Histórico\nda Empresa"])
         UC8(["Editar Auditoria"])
         UC9(["Consultar Trilha de Auditoria"])
-        UC10(["Gerenciar Conta"])
+        UC10(["Gerenciar Conta\n(nome / e-mail / senha)"])
+        UC11(["Renomear Empresa"])
+        UC12(["Convidar Membro"])
+        UC13(["Remover Membro"])
     end
-
+ 
     Auditor --- UC0
     Auditor --- UC1
     Auditor --- UC2
     Auditor --- UC5
     Auditor --- UC7
     Auditor --- UC10
-
-    UC2 -. «include» .-> UC3
-    UC3 -. «extend» .-> UC4
-    UC5 -. «extend» .-> UC6
-    UC7 -. «extend» .-> UC8
-    UC7 -. «extend» .-> UC9
+    Admin --- UC0
+    Admin --- UC10
+ 
+    UC2  -. «include» .-> UC3
+    UC3  -. «extend» .->  UC4
+    UC3  -. «extend» .->  UC_EV
+    UC5  -. «extend» .->  UC6
+    UC7  -. «extend» .->  UC8
+    UC7  -. «extend» .->  UC9
+    UC10 -. «extend» .->  UC11
+    UC10 -. «extend» .->  UC12
+    UC10 -. «extend» .->  UC13
+ 
+    Admin -.->|«herda»| Auditor
 ```
-
+ 
 **Notas de leitura:**
-- `«include»` indica que o caso de uso é **sempre** executado como parte do caso de uso de origem.
-- `«extend»` indica execução **condicional** (somente quando a condição é satisfeita).
-
+- `«include»` — caso de uso **sempre** executado como parte do origem.
+- `«extend»` — execução **condicional** (apenas quando a condição é satisfeita).
+- **Administrador** herda todos os casos de uso do **Auditor** e adiciona as operações de gestão de membros e renomeação da empresa.
+- O histórico é **compartilhado pela empresa**: qualquer membro vê as auditorias da organização.
 ---
 
 ### Diagrama de Classes
 
-Modelo de domínio do sistema. As quatro classes de persistência refletem diretamente as coleções do banco de dados (PocketBase/SQLite). As demais representam entidades de domínio e lógica de negócio tratadas na camada de aplicação.
+Modelo de domínio completo. As classes com estereótipo `persistência` correspondem diretamente às coleções do banco de dados (PocketBase/SQLite). As demais representam entidades de domínio e lógica da camada de aplicação.
  
 ```mermaid
 classDiagram
@@ -345,12 +386,10 @@ classDiagram
     class Usuario {
         <<persistência - users>>
         -String id
-        -String name
         -String companyName
         -String email
-        -Boolean emailVisibility
         -Boolean verified
-        -String avatar
+        -String company
         -Date created
         -Date updated
         +autenticar() AuthToken
@@ -358,10 +397,32 @@ classDiagram
         +listarAuditorias() List~Auditoria~
     }
  
+    class Empresa {
+        <<persistência - companies>>
+        -String id
+        -String name
+        -String owner
+        -String[] members
+        -Date created
+        -Date updated
+        +renomear(name)
+        +convidarMembro(email)
+        +removerMembro(memberId)
+    }
+ 
+    class MembroEmpresa {
+        <<domínio - embutido em Empresa>>
+        -String id
+        -String email
+        -Boolean isOwner
+        -String createdAt
+    }
+ 
     class Auditoria {
         <<persistência - audits>>
         -String id
         -String user
+        -String company
         -int auditNumber
         -String companyName
         -String module
@@ -408,6 +469,17 @@ classDiagram
         +expirou() boolean
     }
  
+    class AuditoriaEvidencia {
+        <<persistência - audit_evidences>>
+        -String id
+        -String user
+        -String audit
+        -String controlId
+        -String file
+        -Date created
+        -Date updated
+    }
+ 
     class Modulo {
         <<enumeration>>
         ISO27001
@@ -437,6 +509,16 @@ classDiagram
         -String controlId
         -ControlStatus status
         -String inProgressDetails
+        -String evidence
+        -EvidenceFile evidenceFile
+    }
+ 
+    class EvidenceFile {
+        <<domínio - referência de arquivo>>
+        -String id
+        -String fileName
+        -int size
+        -String createdAt
     }
  
     class AuditStats {
@@ -453,44 +535,62 @@ classDiagram
         +calcularPercentuais() Map
     }
  
+    class CategoryStats {
+        <<domínio - calculado>>
+        -String category
+        -AuditStats stats
+    }
+ 
     class Dashboard {
         <<apresentação>>
         -Auditoria auditoria
         -List~Auditoria~ historico
         +exibirEstatisticas() AuditStats
+        +exibirEstatisticasPorCategoria() List~CategoryStats~
         +gerarGraficoPizza()
         +gerarGraficoBarras()
         +gerarGraficoComparativo()
     }
  
-    Usuario "1" --> "0..*" Auditoria : realiza
-    Usuario "1" --> "0..*" AuditLog : gera
-    Usuario "1" --> "0..*" AuthOTP : solicita
-    Auditoria "1" --> "1" Modulo : pertence a
-    Auditoria "1" --> "1..*" ControlResponse : contém
-    Auditoria "1" --> "0..*" AuditLog : registrado em
-    ControlResponse "*" --> "1" Control : avalia
-    ControlResponse --> ControlStatus : tem
-    Auditoria "1" --> "1" AuditStats : gera
-    AuditStats "1" --> "1" Dashboard : exibe em
+    Usuario "1"    -->  "1"    Empresa            : pertence a
+    Empresa "1"    -->  "1..*" MembroEmpresa      : possui
+    Empresa "1"    -->  "0..*" Auditoria          : agrupa
+    Usuario "1"    -->  "0..*" Auditoria          : realiza
+    Usuario "1"    -->  "0..*" AuditLog           : gera
+    Usuario "1"    -->  "0..*" AuthOTP            : solicita
+    Usuario "1"    -->  "0..*" AuditoriaEvidencia : envia
+    Auditoria "1"  -->  "1"    Modulo             : pertence a
+    Auditoria "1"  -->  "1..*" ControlResponse    : contém
+    Auditoria "1"  -->  "0..*" AuditLog           : registrado em
+    Auditoria "1"  -->  "0..*" AuditoriaEvidencia : possui
+    ControlResponse "*"  -->  "1"    Control        : avalia
+    ControlResponse      -->         ControlStatus  : tem
+    ControlResponse "1"  -->  "0..1" EvidenceFile   : referencia
+    AuditoriaEvidencia "1" --> "1"   EvidenceFile   : representa
+    Auditoria "1"  -->  "1"    AuditStats         : gera
+    AuditStats "1" -->  "1"    Dashboard          : exibe em
+    AuditStats "1" -->  "*"    CategoryStats      : detalha em
 ```
  
 **Principais relacionamentos:**
-- As classes `Usuario`, `Auditoria`, `AuditLog` e `AuthOTP` correspondem diretamente às coleções persistidas no banco de dados.
-- `ControlResponse` é serializada como JSON dentro do campo `responses` de `Auditoria`, sem tabela própria.
+- `Usuario`, `Empresa`, `Auditoria`, `AuditLog`, `AuthOTP` e `AuditoriaEvidencia` correspondem diretamente às coleções persistidas no banco de dados.
+- `ControlResponse` é serializada como JSON dentro do campo `responses` de `Auditoria`, sem coleção própria. Inclui agora `evidence` (texto livre) e `evidenceFile` (referência ao arquivo).
+- `AuditoriaEvidencia` armazena o arquivo em si (via PocketBase file storage). `EvidenceFile` é o tipo de domínio que carrega os metadados no frontend.
+- `Empresa` é o pivot de multi-tenancy: auditorias e evidências são acessíveis por todos os membros da mesma empresa.
 - `Control` representa o catálogo normativo estático (arquivos de dados), não persistido no banco.
-- `AuditLog` encadeia registros por `previousHash`, formando uma trilha SHA-256 verificável que detecta adulterações retroativas.
+- `AuditLog` encadeia registros por `previousHash`, formando uma trilha SHA-256 verificável.
+- `CategoryStats` é calculada a partir de `AuditStats` agrupando as respostas por categoria de controle (temas da 27002 ou seções do Anexo A da 27701).
 
 ---
 
 ### Diagrama de Atividades
 
-O fluxo completo da ferramenta cobre quatro fases: Autenticação, Preparação, Execução e Análise. A fase de análise inclui **processamento paralelo** (cálculo de indicadores, agrupamento por categoria e recuperação do histórico ocorrem de forma concorrente) e **tratamento de exceção** quando não há histórico suficiente para o comparativo.
-
+O fluxo completo da ferramenta cobre quatro fases: Autenticação, Preparação, Execução e Análise. A fase de Execução agora inclui o **upload opcional de evidências** por controle. A fase de Análise inclui **processamento paralelo** (cálculo de indicadores, agrupamento por categoria e recuperação do histórico ocorrem de forma concorrente) e **tratamento de exceção** quando não há histórico suficiente para o comparativo.
+ 
 ```mermaid
 flowchart TD
     Inicio([Início]) --> Auth
-
+ 
     subgraph Auth["Autenticação"]
         direction TB
         A1{Usuário\ncadastrado?}
@@ -503,18 +603,18 @@ flowchart TD
         A6 --> A3
         A5 -->|Sim| A7[Emitir token JWT\ne restaurar sessão]
     end
-
+ 
     Auth --> Fase1
-
+ 
     subgraph Fase1["Preparação"]
         direction TB
         P1[Selecionar módulo\n27001 ou 27701]
         P1 --> P2[(Carregar catálogo\nde controles do módulo)]
         P2 --> P3[Registrar data\nde início da auditoria]
     end
-
+ 
     Fase1 --> Fase2
-
+ 
     subgraph Fase2["Execução da Auditoria"]
         direction TB
         E1[Apresentar controle\ncódigo + título + descrição]
@@ -523,10 +623,14 @@ flowchart TD
         E2 -->|Não se Aplica| E4[Registrar NAO_APLICA\n+ observação opcional]
         E2 -->|Não Conforme| E5[Registrar NAO_CONFORME\n+ observação opcional]
         E2 -->|Em Andamento| E6[Registrar EM_ANDAMENTO\n+ detalhamento opcional]
-        E3 --> E7{Restam\ncontroles?}
-        E4 --> E7
-        E5 --> E7
-        E6 --> E7
+        E3 --> EV1{Anexar\nevidência?}
+        E4 --> EV1
+        E5 --> EV1
+        E6 --> EV1
+        EV1 -->|Sim| EV2[Upload de arquivo\nmax 5 MB por controle]
+        EV1 -->|Não| E7
+        EV2 --> E7
+        E7{Restam\ncontroles?}
         E7 -->|Sim| E8{Navegar}
         E8 -->|Próximo| E1
         E8 -->|Anterior| E1
@@ -534,9 +638,9 @@ flowchart TD
         E7 -->|Não| E9[(Persistir auditoria\nvia API - REST)]
         E9 --> E10[Gerar registro\nno audit_log com hash SHA-256]
     end
-
+ 
     Fase2 --> Fork(( ))
-
+ 
     subgraph Fase3["Análise - Processamento Paralelo"]
         direction TB
         Fork --> C1[Calcular\n% conformidade geral]
@@ -555,13 +659,13 @@ flowchart TD
         C6 -->|Não| Fim
         C8 --> Fim
     end
-
+ 
     Fim([Fim])
 ```
-
+ 
 **Pontos de atenção do fluxo:**
 - A fase de **Autenticação** inclui verificação por OTP com limite de tentativas, garantindo segurança no acesso.
-- A fase de **Execução** permite navegação livre entre controles (próximo, anterior ou por índice), sem ordem obrigatória.
+- A fase de **Execução** permite navegação livre entre controles (próximo, anterior ou por índice), sem ordem obrigatória. Após cada classificação, o auditor pode opcionalmente **anexar um arquivo de evidência** (máx. 5 MB por controle).
 - A **Fase 3** modela explicitamente o paralelismo entre cálculo de indicadores, agrupamento e recuperação do histórico.
 - O **modo comparativo** trata a exceção de histórico insuficiente, exibindo aviso ao invés de quebrar o fluxo.
 
