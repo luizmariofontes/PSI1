@@ -24,7 +24,6 @@
 
 O **Sistema de Diagnóstico de Conformidade ISO 27001/27701** é uma ferramenta acadêmica desenvolvida no contexto da disciplina **Projeto de Segurança I (PSI)** cujo objetivo é auxiliar auditores, profissionais de segurança da informação e responsáveis pelo programa de privacidade de uma organização a realizar **autoavaliações de conformidade** frente a duas das principais normas internacionais da família ISO/IEC 27000:
 
-- **ABNT NBR ISO/IEC 27001**: Estabelece os requisitos para um Sistema de Gestão de Segurança da Informação (SGSI).
 - **ABNT NBR ISO/IEC 27701:2026**: Estende a 27001 para a gestão da privacidade de informações pessoais, sendo a referência para um Sistema de Gestão da Privacidade da Informação (SGPI). É aplicável tanto a controladores quanto a operadores de dados pessoais (DP) e está mapeada à LGPD (Lei nº 13.709/2018).
 - **ABNT NBR ISO/IEC 27002:2022**: Fornece o catálogo detalhado de controles utilizados como **base de diagnóstico** para a 27001, organizados em quatro temas (Organizacional, Pessoas, Físico e Tecnológico), totalizando 93 controles.
 
@@ -55,9 +54,6 @@ Os requisitos funcionais (RF) descrevem **o que o sistema deve fazer**, as funci
 
 O sistema deve exigir autenticação antes de qualquer acesso às funcionalidades de auditoria. O fluxo de autenticação inclui **cadastro** (nome da empresa, e-mail e senha) e **login** (e-mail e senha), ambos seguidos de **verificação por código OTP de 6 dígitos** enviado ao e-mail informado. O acesso a auditorias e dados históricos é restrito ao usuário autenticado.
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Autenticar auditor"
-
 </details>
 
 <details>
@@ -66,9 +62,6 @@ O sistema deve exigir autenticação antes de qualquer acesso às funcionalidade
 <br>
 
 O sistema deve permitir que o usuário selecione, no início de cada auditoria, entre dois módulos mutuamente exclusivos: **ISO/IEC 27001** (segurança da informação) ou **ISO/IEC 27701** (privacidade da informação). A escolha do módulo determina o catálogo de controles que será carregado para a avaliação subsequente.
-
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Um módulo para 27001 e outro para 27701"
 
 </details>
 
@@ -79,9 +72,6 @@ O sistema deve permitir que o usuário selecione, no início de cada auditoria, 
 
 O sistema deve carregar automaticamente os controles aplicáveis ao módulo escolhido. Para o módulo **27001**, deve utilizar os 93 controles da **ISO/IEC 27002:2022**, distribuídos nos quatro temas (Organizacional, Pessoas, Físico e Tecnológico). Para o módulo **27701**, deve utilizar os controles do **Anexo A da ISO/IEC 27701:2026**, abrangendo as Tabelas A.1 (controladores), A.2 (operadores) e A.3 (considerações de segurança comuns).
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Utilizar 27002 para diagnóstico da conformidade de 27001"
-
 </details>
 
 <details>
@@ -90,9 +80,6 @@ O sistema deve carregar automaticamente os controles aplicáveis ao módulo esco
 <br>
 
 O sistema deve registrar a data de realização da auditoria, capturada automaticamente no momento de início, e associá-la ao registro da auditoria para fins de rastreabilidade temporal e comparativo histórico.
-
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Armazenar os dados e data de auditoria"
 
 </details>
 
@@ -103,9 +90,6 @@ O sistema deve registrar a data de realização da auditoria, capturada automati
 
 Para cada controle apresentado, o sistema deve permitir que o auditor atribua **uma única** das classificações mutuamente exclusivas: **Conforme**, **Não Conforme**, **Em Andamento** ou **Não se Aplica**. A classificação de "Em Andamento" identifica controles não conformes para os quais já existe trabalho de adequação em curso. O auditor pode complementar qualquer classificação com um **campo de observação textual opcional**.
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Para cada controle, perguntar se está conforme, não conforme, em andamento ou não se aplica"
-
 </details>
 
 <details>
@@ -114,9 +98,6 @@ Para cada controle apresentado, o sistema deve permitir que o auditor atribua **
 <br>
 
 Durante a execução da auditoria, o sistema deve permitir que o auditor navegue livremente entre os controles (avançar, retroceder e acessar diretamente por índice), podendo revisitar e alterar classificações já registradas antes de finalizar a auditoria.
-
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Interface de auditoria sequencial e navegável"
 
 </details>
 
@@ -127,9 +108,6 @@ Durante a execução da auditoria, o sistema deve permitir que o auditor navegue
 
 Ao finalizar a avaliação dos controles, o sistema deve **persistir** todos os dados da auditoria (empresa, módulo, data, respostas, observações) via API no backend, garantindo que possam ser recuperados em sessões posteriores. A auditoria é identificada por um **número sequencial** por conta de usuário.
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Armazenar os dados"
-
 </details>
 
 <details>
@@ -138,9 +116,6 @@ Ao finalizar a avaliação dos controles, o sistema deve **persistir** todos os 
 <br>
 
 O sistema deve permitir que o usuário **edite** uma auditoria previamente salva, atualizando as classificações dos controles. Toda edição deve gerar um novo registro na trilha de auditoria (log), mantendo o histórico de alterações com hash encadeado.
-
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Permitir revisão e atualização de auditorias"
 
 </details>
 
@@ -151,9 +126,6 @@ O sistema deve permitir que o usuário **edite** uma auditoria previamente salva
 
 O sistema deve preservar, por combinação de **conta de usuário e módulo**, o registro das **três auditorias mais recentes** para fins de comparativo evolutivo. O histórico completo de auditorias permanece acessível na tela de Histórico.
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Armazenar os dados e data de auditoria para efeitos comparativos (3 últimas auditorias)"
-
 </details>
 
 <details>
@@ -162,8 +134,6 @@ O sistema deve preservar, por combinação de **conta de usuário e módulo**, o
 <br>
 
 O sistema deve calcular o **percentual geral de conformidade** da auditoria, definido como a razão entre o número de controles classificados como "Conforme" e o total de controles **aplicáveis** (excluindo do denominador os classificados como "Não se Aplica"). Os status "Em Andamento" e "Não Conforme" são contabilizados separadamente nos indicadores.
-
-- **Prioridade:** Essencial
 
 </details>
 
@@ -174,9 +144,6 @@ O sistema deve calcular o **percentual geral de conformidade** da auditoria, def
 
 O sistema deve calcular percentuais **parciais** de conformidade segregados por **categoria de controle**, conforme a taxonomia adotada pelo módulo: as quatro categorias da ISO/IEC 27002 para o módulo 27001 (Organizacional, Pessoas, Físico, Tecnológico) ou as categorias do Anexo A da ISO/IEC 27701 para o módulo de privacidade.
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Agrupar os dados por tipos de controle (27002)"
-
 </details>
 
 <details>
@@ -185,9 +152,6 @@ O sistema deve calcular percentuais **parciais** de conformidade segregados por 
 <br>
 
 O sistema deve apresentar um **painel consolidado (dashboard)** exibindo simultaneamente: (i) cards com os totais e percentuais de cada status, (ii) gráfico de pizza com a distribuição geral de conformidade, e (iii) gráfico de barras comparando o percentual de conformidade entre as categorias de controle.
-
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Apresentar os dados no formato de dashboard com gráficos (pizza ou barra)"
 
 </details>
 
@@ -198,9 +162,6 @@ O sistema deve apresentar um **painel consolidado (dashboard)** exibindo simulta
 
 O dashboard deve oferecer uma **aba de modo comparativo**, exibindo a evolução dos indicadores de conformidade nas últimas auditorias do mesmo módulo. Quando não houver histórico suficiente, o sistema deve exibir mensagem informativa adequada.
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Funcionalidade de comparativo / mostrar evolução de conformidade"
-
 </details>
 
 <details>
@@ -209,9 +170,6 @@ O dashboard deve oferecer uma **aba de modo comparativo**, exibindo a evolução
 <br>
 
 O sistema deve apresentar uma **tela de histórico** listando todas as auditorias realizadas pelo usuário, com data, módulo, número sequencial e indicadores resumidos. A partir do histórico, o auditor pode visualizar o dashboard de qualquer auditoria anterior, editá-la ou consultar sua trilha de auditoria.
-
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Listar e consultar auditorias anteriores"
 
 </details>
 
@@ -222,9 +180,6 @@ O sistema deve apresentar uma **tela de histórico** listando todas as auditoria
 
 Cada ação relevante sobre uma auditoria (criação ou edição) deve gerar um **registro de log imutável**, contendo: ator, data/hora, número da auditoria, hash SHA-256 do evento e hash do evento anterior (encadeamento). Isso garante rastreabilidade e permite detectar adulterações posteriores nos registros.
 
-- **Prioridade:** Essencial
-- **Origem:** PSI - "Auditabilidade e integridade dos registros"
-
 </details>
 
 <details>
@@ -233,9 +188,6 @@ Cada ação relevante sobre uma auditoria (criação ou edição) deve gerar um 
 <br>
 
 O sistema deve permitir que o usuário autenticado atualize os dados de sua conta: **nome da empresa**, **e-mail** e **senha**. A alteração de senha deve exigir a confirmação da senha atual antes de aplicar a nova.
-
-- **Prioridade:** Importante
-- **Origem:** PSI - "Gerenciamento de perfil de usuário"
 
 </details>
 
@@ -647,5 +599,7 @@ flowchart TD
 - **ABNT NBR ISO/IEC 27002:2022** - *Segurança da informação, segurança cibernética e proteção da privacidade - Controles de segurança da informação.* Rio de Janeiro: ABNT, 2022.
 
 - **ABNT NBR ISO/IEC 27701:2026** - *Segurança da informação, segurança cibernética e proteção da privacidade - Sistemas de gestão da privacidade da informação - Requisitos e orientações.* 2ª edição. Rio de Janeiro: ABNT, 22 jan. 2026. 90 p. ICS 03.100.70; 35.030. Adoção idêntica da ISO/IEC 27701:2025. Cancela e substitui a ABNT NBR ISO/IEC 27701:2020.
+
+- **VALENTE, Marco Tulio.** *Engenharia de Software Moderna: Princípios e Práticas para Desenvolvimento de Software com Produtividade.* Editora Independente, 2020. Disponível em: <https://engsoftmoderna.info/>. Acesso em: 24 maio 2026.
 
 ---
