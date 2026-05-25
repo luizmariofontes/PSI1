@@ -402,56 +402,84 @@ flowchart LR
 
 ### Diagrama de Classes
 
-Modelo de domínio do sistema, refletindo as entidades, tipos e relacionamentos implementados.
-
+Modelo de domínio do sistema. As quatro classes de persistência refletem diretamente as coleções do banco de dados (PocketBase/SQLite). As demais representam entidades de domínio e lógica de negócio tratadas na camada de aplicação.
+ 
 ```mermaid
 classDiagram
     direction LR
-
+ 
     class Usuario {
+        <<persistência - users>>
         -String id
+        -String name
         -String companyName
         -String email
-        -String passwordHash
-        -Date createdAt
+        -Boolean emailVisibility
+        -Boolean verified
+        -String avatar
+        -Date created
+        -Date updated
         +autenticar() AuthToken
         +atualizarConta()
-        +listarAuditorias() List~AuditRecord~
+        +listarAuditorias() List~Auditoria~
     }
-
-    class AuditRecord {
+ 
+    class Auditoria {
+        <<persistência - audits>>
         -String id
+        -String user
         -int auditNumber
         -String companyName
-        -Date auditDate
-        -Modulo module
-        -List~ControlResponse~ responses
-        -Date createdAt
+        -String module
+        -String auditDate
+        -JSON responses
+        -Date created
+        -Date updated
         +salvar()
         +editar()
         +calcularEstatisticas() AuditStats
     }
-
+ 
+    class AuditLog {
+        <<persistência - audit_logs>>
+        -String id
+        -String user
+        -String audit
+        -String action
+        -String actorEmail
+        -String actorCompanyName
+        -int auditNumber
+        -String occurredAt
+        -String previousHash
+        -String hash
+        -JSON payload
+        -Date created
+        -Date updated
+        +verificarIntegridade() boolean
+    }
+ 
+    class AuthOTP {
+        <<persistência - auth_otps>>
+        -String id
+        -String user
+        -String email
+        -String purpose
+        -String codeHash
+        -String expiresAt
+        -String usedAt
+        -int attempts
+        -Date created
+        -Date updated
+        +validar(code) boolean
+        +expirou() boolean
+    }
+ 
     class Modulo {
         <<enumeration>>
         ISO27001
         ISO27701
     }
-
-    class Control {
-        -String id
-        -String code
-        -String title
-        -String description
-        -String category
-    }
-
-    class ControlResponse {
-        -String controlId
-        -ControlStatus status
-        -String inProgressDetails
-    }
-
+ 
     class ControlStatus {
         <<enumeration>>
         CONFORME
@@ -460,8 +488,25 @@ classDiagram
         NAO_APLICA
         PENDENTE
     }
-
+ 
+    class Control {
+        <<domínio - catálogo estático>>
+        -String id
+        -String code
+        -String title
+        -String description
+        -String category
+    }
+ 
+    class ControlResponse {
+        <<domínio - embutido em Auditoria>>
+        -String controlId
+        -ControlStatus status
+        -String inProgressDetails
+    }
+ 
     class AuditStats {
+        <<domínio - calculado>>
         -int total
         -int conforme
         -int naoConforme
@@ -473,46 +518,34 @@ classDiagram
         -float naoAplicaPercentage
         +calcularPercentuais() Map
     }
-
+ 
     class Dashboard {
-        -AuditRecord auditoria
-        -List~AuditRecord~ historico
+        <<apresentação>>
+        -Auditoria auditoria
+        -List~Auditoria~ historico
         +exibirEstatisticas() AuditStats
         +gerarGraficoPizza()
         +gerarGraficoBarras()
         +gerarGraficoComparativo()
     }
-
-    class AuditLog {
-        -String id
-        -String auditId
-        -String action
-        -String actorEmail
-        -String actorCompanyName
-        -int auditNumber
-        -String occurredAt
-        -String previousHash
-        -String hash
-        -JSONRaw payload
-        +verificarIntegridade() boolean
-    }
-
-    Usuario "1" --> "0..*" AuditRecord : realiza
-    AuditRecord "1" --> "1" Modulo : pertence a
-    AuditRecord "1" --> "1..*" ControlResponse : contém
+ 
+    Usuario "1" --> "0..*" Auditoria : realiza
+    Usuario "1" --> "0..*" AuditLog : gera
+    Usuario "1" --> "0..*" AuthOTP : solicita
+    Auditoria "1" --> "1" Modulo : pertence a
+    Auditoria "1" --> "1..*" ControlResponse : contém
+    Auditoria "1" --> "0..*" AuditLog : registrado em
     ControlResponse "*" --> "1" Control : avalia
-    Control --> Modulo : pertence a
     ControlResponse --> ControlStatus : tem
-    AuditRecord "1" --> "1" AuditStats : gera
+    Auditoria "1" --> "1" AuditStats : gera
     AuditStats "1" --> "1" Dashboard : exibe em
-    AuditRecord "1" --> "0..*" AuditLog : registrado em
 ```
-
+ 
 **Principais relacionamentos:**
-- Um `Usuario` pode ter **várias** `AuditRecord` (todas acessíveis no histórico; as 3 mais recentes por módulo usadas no comparativo).
-- Cada `AuditRecord` está vinculada a **um único** `Modulo` (27001 **ou** 27701).
-- Cada `ControlResponse` referencia **um** `Control` e armazena seu `ControlStatus`, com campo opcional de detalhamento.
-- `AuditLog` encadeia registros por `previousHash`, formando uma trilha de integridade verificável.
+- As classes `Usuario`, `Auditoria`, `AuditLog` e `AuthOTP` correspondem diretamente às coleções persistidas no banco de dados.
+- `ControlResponse` é serializada como JSON dentro do campo `responses` de `Auditoria`, sem tabela própria.
+- `Control` representa o catálogo normativo estático (arquivos de dados), não persistido no banco.
+- `AuditLog` encadeia registros por `previousHash`, formando uma trilha SHA-256 verificável que detecta adulterações retroativas.
 
 ---
 
