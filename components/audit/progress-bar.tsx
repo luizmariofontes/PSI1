@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { Control, ControlResponse } from '@/lib/types'
 import { getStatusColor, getStatusLabel } from '@/lib/audit-utils'
 import { cn } from '@/lib/utils'
@@ -12,6 +13,60 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ controls, responses, currentIndex, onControlClick }: ProgressBarProps) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const dragState = useRef<{ startX: number; startScroll: number; moved: boolean } | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    const el = scrollerRef.current
+    if (!el) return
+    // Botao esquerdo apenas
+    if (event.button !== 0) return
+    dragState.current = {
+      startX: event.clientX,
+      startScroll: el.scrollLeft,
+      moved: false,
+    }
+    setIsDragging(true)
+  }
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const drag = dragState.current
+    const el = scrollerRef.current
+    if (!drag || !el) return
+    const dx = event.clientX - drag.startX
+    if (Math.abs(dx) > 4) drag.moved = true
+    el.scrollLeft = drag.startScroll - dx
+  }
+
+  const endDrag = () => {
+    setIsDragging(false)
+    // dragState.current = null sera limpo no proximo mousedown; manter por enquanto
+    // para que onClickCapture possa checar `moved`.
+    window.setTimeout(() => {
+      dragState.current = null
+    }, 0)
+  }
+
+  // Converte rolagem vertical do mouse em horizontal, para permitir varredura
+  // dos cartoes de progresso usando a roda do mouse.
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const el = scrollerRef.current
+    if (!el) return
+    if (event.deltaY === 0) return
+    if (el.scrollWidth <= el.clientWidth) return
+    el.scrollLeft += event.deltaY
+    event.preventDefault()
+  }
+
+  // Cancela o clique nos botoes quando o gesto foi um arrasto (e nao um toque).
+  const blockClickIfDragged = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (dragState.current?.moved) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
   const categories = [...new Set(controls.map(c => c.category))]
   const answeredCount = responses.length
   const completionPercentage = controls.length > 0 ? (answeredCount / controls.length) * 100 : 0
@@ -57,7 +112,19 @@ export function ProgressBar({ controls, responses, currentIndex, onControlClick 
           />
         </div>
 
-        <div className="overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          ref={scrollerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          onWheel={handleWheel}
+          onClickCapture={blockClickIfDragged}
+          className={cn(
+            'overflow-x-auto pb-2 select-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            isDragging ? 'cursor-grabbing' : 'cursor-grab',
+          )}
+        >
           <div className="flex min-w-max gap-4">
             {categories.map(category => {
               const categoryControls = controls.filter(c => c.category === category)

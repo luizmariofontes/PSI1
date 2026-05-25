@@ -10,10 +10,19 @@ export interface Control {
   category: string
 }
 
+export interface EvidenceFile {
+  id: string
+  fileName: string
+  size: number
+  createdAt?: string
+}
+
 export interface ControlResponse {
   controlId: string
   status: ControlStatus
   inProgressDetails?: string
+  evidence?: string
+  evidenceFile?: EvidenceFile
 }
 
 export interface AuditRecord {
@@ -31,6 +40,22 @@ export interface Company {
   name: string
   email: string
   createdAt: string
+  companyId?: string
+}
+
+export interface CompanyMember {
+  id: string
+  email: string
+  isOwner: boolean
+  createdAt: string
+}
+
+export interface CompanyDetails {
+  id: string
+  name: string
+  ownerId: string
+  createdAt: string
+  members: CompanyMember[]
 }
 
 export interface AuditLog {

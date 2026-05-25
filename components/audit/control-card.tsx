@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Control, ControlResponse, ControlStatus } from '@/lib/types'
+import { useRef, useState, useEffect } from 'react'
+import { Control, ControlResponse, ControlStatus, EvidenceFile } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -19,19 +19,31 @@ import {
 } from '@/components/ui/alert-dialog'
 import { getStatusLabel, getStatusColor } from '@/lib/audit-utils'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Check, FileText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, FileText, Paperclip, Trash2, Upload } from 'lucide-react'
 
 interface ControlCardProps {
   control: Control
   currentResponse?: ControlResponse
   onResponseChange: (status: ControlStatus, inProgressDetails?: string) => void
+  onEvidenceChange: (evidence: string) => void
+  onEvidenceFileChange: (evidenceFile: EvidenceFile | null) => void
+  onUploadEvidenceFile: (file: File) => Promise<{ success: boolean; error?: string; evidence?: EvidenceFile }>
+  onDeleteEvidenceFile: (evidenceId: string) => Promise<{ success: boolean; error?: string }>
+  buildEvidenceDownloadUrl: (evidenceId: string) => string
   controlNumber: number
   totalControls: number
   onPrevious: () => void
   onNext: () => void
   isFirst: boolean
   isLast: boolean
-  onFinish: () => void
+}
+
+const MAX_EVIDENCE_FILE_SIZE = 5 * 1024 * 1024
+function formatFileSize(bytes: number) {
+  if (!bytes) return '0 B'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
 // Opção principal exibida na UI (não inclui "em-andamento" diretamente)
@@ -41,13 +53,17 @@ export function ControlCard({
   control,
   currentResponse,
   onResponseChange,
+  onEvidenceChange,
+  onEvidenceFileChange,
+  onUploadEvidenceFile,
+  onDeleteEvidenceFile,
+  buildEvidenceDownloadUrl,
   controlNumber,
   totalControls,
   onPrevious,
   onNext,
   isFirst,
   isLast,
-  onFinish,
 }: ControlCardProps) {
   // Deriva a escolha primária a partir do status real persistido
   const derivePrimary = (status: ControlStatus | undefined): PrimaryChoice => {
@@ -63,6 +79,12 @@ export function ControlCard({
   const [detailsError, setDetailsError] = useState('')
   const [advanceAfterDetails, setAdvanceAfterDetails] = useState(false)
 
+  const [showEvidenceDialog, setShowEvidenceDialog] = useState(false)
+  const [evidenceText, setEvidenceText] = useState('')
+  const [evidenceFileError, setEvidenceFileError] = useState('')
+  const [evidenceUploading, setEvidenceUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
   // Sincroniza estado local quando muda o controle exibido
   useEffect(() => {
     setPrimaryChoice(derivePrimary(currentResponse?.status))
@@ -70,7 +92,61 @@ export function ControlCard({
     setDetailsError('')
     setShowInProgressQuestion(false)
     setShowDetailsDialog(false)
-  }, [control.id, currentResponse?.status])
+    setEvidenceText(currentResponse?.evidence || '')
+    setShowEvidenceDialog(false)
+    setEvidenceFileError('')
+    setEvidenceUploading(false)
+  }, [control.id, currentResponse?.status, currentResponse?.evidence, currentResponse?.evidenceFile?.id])
+
+  const hasEvidenceText = Boolean(currentResponse?.evidence && currentResponse.evidence.trim() !== '')
+  const hasEvidenceFile = Boolean(currentResponse?.evidenceFile?.id)
+  const hasEvidence = hasEvidenceText || hasEvidenceFile
+
+  const handleSaveEvidence = () => {
+    onEvidenceChange(evidenceText.trim())
+    setShowEvidenceDialog(false)
+  }
+
+  const handleFilePick = () => {
+    setEvidenceFileError('')
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (event.target) event.target.value = ''
+    if (!file) return
+
+    if (file.size > MAX_EVIDENCE_FILE_SIZE) {
+      setEvidenceFileError('O arquivo excede o limite de 5MB.')
+      return
+    }
+
+    setEvidenceUploading(true)
+    const result = await onUploadEvidenceFile(file)
+    setEvidenceUploading(false)
+
+    if (!result.success || !result.evidence) {
+      setEvidenceFileError(result.error || 'Falha ao enviar o arquivo.')
+      return
+    }
+
+    onEvidenceFileChange(result.evidence)
+  }
+
+  const handleRemoveEvidenceFile = async () => {
+    const existing = currentResponse?.evidenceFile
+    if (!existing) return
+    setEvidenceUploading(true)
+    const result = await onDeleteEvidenceFile(existing.id)
+    setEvidenceUploading(false)
+
+    if (!result.success) {
+      setEvidenceFileError(result.error || 'Nao foi possivel remover o arquivo.')
+      return
+    }
+    onEvidenceFileChange(null)
+  }
 
   const advanceToNext = () => {
     if (!isLast) {
@@ -165,6 +241,22 @@ export function ControlCard({
                 Em andamento
               </Button>
             )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEvidenceText(currentResponse?.evidence || '')
+                setShowEvidenceDialog(true)
+              }}
+              className={cn(
+                'h-7 rounded-full px-3 text-xs',
+                hasEvidence && 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+              )}
+            >
+              <Paperclip className="mr-1.5 h-3.5 w-3.5" />
+              {hasEvidence ? 'Evidência anexada' : 'Adicionar evidência'}
+            </Button>
           </div>
           <span className="text-sm text-slate-500">
             {controlNumber} de {totalControls}
@@ -211,17 +303,10 @@ export function ControlCard({
             Anterior
           </Button>
 
-          {isLast ? (
-            <Button onClick={onFinish} disabled={!isAnswered}>
-              <Check className="h-4 w-4 mr-2" />
-              Finalizar Auditoria
-            </Button>
-          ) : (
-            <Button onClick={onNext} disabled={!isAnswered}>
-              Próximo
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
+          <Button onClick={onNext} disabled={!isAnswered || isLast}>
+            Próximo
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
       </CardContent>
 
@@ -242,6 +327,98 @@ export function ControlCard({
             </Button>
             <Button onClick={handleAskDetails} className="bg-blue-600 hover:bg-blue-700">
               Sim
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showEvidenceDialog} onOpenChange={setShowEvidenceDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Evidência do controle</AlertDialogTitle>
+            <AlertDialogDescription>
+              Registre a evidência (descrição/link) e, opcionalmente, anexe um arquivo de até 5MB que comprove a avaliação deste controle.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Descrição</Label>
+              <Textarea
+                value={evidenceText}
+                onChange={(event) => setEvidenceText(event.target.value)}
+                placeholder="Ex.: Política PSI-001 aprovada em 2026-03-12 (https://intranet/.../psi-001.pdf), confirmada em entrevista com o CISO."
+                className="min-h-28 resize-y"
+              />
+              <p className="text-xs text-slate-500">
+                Deixe em branco para remover a descrição.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Arquivo (até 5MB)</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileSelected}
+                className="hidden"
+              />
+              {currentResponse?.evidenceFile?.id ? (
+                <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="min-w-0">
+                    <p
+                      className="text-sm font-medium text-slate-900 break-all"
+                      title={currentResponse.evidenceFile.fileName}
+                    >
+                      {currentResponse.evidenceFile.fileName}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {formatFileSize(currentResponse.evidenceFile.size)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={buildEvidenceDownloadUrl(currentResponse.evidenceFile.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Baixar
+                    </a>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveEvidenceFile}
+                      disabled={evidenceUploading}
+                      className="h-8 border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleFilePick}
+                  disabled={evidenceUploading}
+                  className="h-10 w-full justify-start"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {evidenceUploading ? 'Enviando...' : 'Selecionar arquivo'}
+                </Button>
+              )}
+              {evidenceFileError && (
+                <p className="text-xs text-red-600">{evidenceFileError}</p>
+              )}
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+            <Button onClick={handleSaveEvidence} className="bg-blue-600 hover:bg-blue-700">
+              Salvar descrição
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
