@@ -76,12 +76,21 @@ type companyMemberResponse struct {
 	CreatedAt string `json:"createdAt"`
 }
 
+type companyInviteResponse struct {
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"createdAt"`
+	ExpiresAt string `json:"expiresAt"`
+}
+
 type companyResponse struct {
-	ID        string                  `json:"id"`
-	Name      string                  `json:"name"`
-	OwnerID   string                  `json:"ownerId"`
-	CreatedAt string                  `json:"createdAt"`
-	Members   []companyMemberResponse `json:"members"`
+	ID             string                  `json:"id"`
+	Name           string                  `json:"name"`
+	OwnerID        string                  `json:"ownerId"`
+	CreatedAt      string                  `json:"createdAt"`
+	Members        []companyMemberResponse `json:"members"`
+	PendingInvites []companyInviteResponse `json:"pendingInvites"`
 }
 
 type companyUpdateRequest struct {
@@ -90,6 +99,14 @@ type companyUpdateRequest struct {
 
 type companyInviteRequest struct {
 	Email string `json:"email"`
+}
+
+type confirmCompanyInviteRequest struct {
+	Token string `json:"token"`
+}
+
+type confirmCompanyInviteResponse struct {
+	Message string `json:"message"`
 }
 
 type authResponse struct {
@@ -153,6 +170,7 @@ func main() {
 		group.GET("/company", handleGetCompany).Bind(apis.RequireAuth("users"))
 		group.PATCH("/company", handleRenameCompany).Bind(apis.RequireAuth("users"))
 		group.POST("/company/invite", handleInviteMember).Bind(apis.RequireAuth("users"))
+		group.POST("/company/invite/confirm", handleConfirmCompanyInvite)
 		group.DELETE("/company/members/{id}", handleRemoveMember).Bind(apis.RequireAuth("users"))
 		group.POST("/audits/{id}/evidences", handleUploadEvidence).Bind(apis.RequireAuth("users"))
 		// Sem RequireAuth: o handler aceita token via query string para suportar
@@ -444,6 +462,44 @@ func generateOTPCode() (string, error) {
 	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
+func generateSecureToken() (string, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(raw), nil
+}
+
+func hashInviteToken(token string) string {
+	pepper := os.Getenv("INVITE_HASH_SECRET")
+	if pepper == "" {
+		pepper = os.Getenv("OTP_HASH_SECRET")
+	}
+	if pepper == "" {
+		pepper = os.Getenv("RESEND_API_KEY")
+	}
+	sum := sha256.Sum256([]byte(strings.TrimSpace(token) + "." + pepper))
+	return hex.EncodeToString(sum[:])
+}
+
+func findOpenCompanyInvite(app core.App, companyID string, inviteeID string) (*core.Record, error) {
+	records, err := app.FindRecordsByFilter(
+		"company_invites",
+		"company = {:company} && invitee = {:invitee} && acceptedAt = ''",
+		"-created",
+		1,
+		0,
+		dbx.Params{"company": companyID, "invitee": inviteeID},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, nil
+	}
+	return records[0], nil
+}
+
 func hashOTP(code string, challengeID string, email string, purpose string) string {
 	pepper := os.Getenv("OTP_HASH_SECRET")
 	if pepper == "" {
@@ -498,6 +554,92 @@ func sendOTPEmail(to string, companyName string, purpose string, code string) er
 	}
 
 	return nil
+}
+
+func sendCompanyInviteEmail(e *core.RequestEvent, to string, companyName string, token string) error {
+	confirmURL := companyInviteConfirmURL(e, token)
+	apiKey := os.Getenv("RESEND_API_KEY")
+	if apiKey == "" {
+		log.Printf("[DEV-INVITE] empresa=%q destinatario=%s url=%s", companyName, to, confirmURL)
+		return nil
+	}
+
+	body := map[string]any{
+		"from":    "WhoISO <notreply@whoiso.lsx.li>",
+		"to":      []string{to},
+		"subject": "Convite para acessar auditorias no WhoISO",
+		"html":    companyInviteEmailHTML(companyName, confirmURL),
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "https://api.resend.com/emails", bytes.NewReader(raw))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		data, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return fmt.Errorf("resend status %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+
+	return nil
+}
+
+func companyInviteConfirmURL(e *core.RequestEvent, token string) string {
+	base := strings.TrimRight(os.Getenv("WHOISO_APP_URL"), "/")
+	if base == "" {
+		base = strings.TrimRight(os.Getenv("NEXT_PUBLIC_APP_URL"), "/")
+	}
+	if base == "" {
+		origin := e.Request.Header.Get("Origin")
+		if isAllowedDevOrigin(origin) {
+			base = strings.TrimRight(origin, "/")
+		}
+	}
+	if base == "" {
+		base = "http://localhost:3000"
+	}
+	return base + "/invite/confirm?token=" + token
+}
+
+func companyInviteEmailHTML(companyName string, confirmURL string) string {
+	return fmt.Sprintf(`<!doctype html>
+<html>
+  <body style="margin:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:32px;">
+            <tr>
+              <td>
+                <div style="margin-bottom:28px;">
+                  <div style="font-size:28px;line-height:1;font-weight:800;color:#0f172a;">Who<span style="color:#38bdf8;">ISO</span></div>
+                  <div style="margin-top:8px;font-size:12px;letter-spacing:3px;font-weight:600;color:#64748b;">AUDITORIA LTDA</div>
+                </div>
+                <h1 style="font-size:26px;line-height:1.2;margin:0 0 10px;color:#0f172a;">Convite para empresa</h1>
+                <p style="font-size:15px;line-height:1.6;margin:0 0 24px;color:#475569;">Você foi convidado para acessar as auditorias da empresa <strong>%s</strong> no WhoISO.</p>
+                <a href="%s" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:12px;padding:14px 20px;font-size:15px;font-weight:700;">Confirmar convite</a>
+                <p style="font-size:13px;line-height:1.6;margin:24px 0 0;color:#64748b;">Este convite expira em 7 dias. Se você não esperava este convite, ignore este email.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`, html.EscapeString(companyName), html.EscapeString(confirmURL))
 }
 
 func otpEmailHTML(companyName string, purpose string, code string) string {
@@ -613,21 +755,17 @@ func handleUpdateAccount(e *core.RequestEvent) error {
 
 func handleListAudits(e *core.RequestEvent) error {
 	companyID := e.Auth.GetString("company")
-
-	filter := "user = {:user}"
-	params := dbx.Params{"user": e.Auth.Id}
-	if companyID != "" {
-		filter = "company = {:company}"
-		params = dbx.Params{"company": companyID}
+	if companyID == "" {
+		return e.JSON(http.StatusOK, []auditResponse{})
 	}
 
 	records, err := e.App.FindRecordsByFilter(
 		"audits",
-		filter,
+		"company = {:company}",
 		"-created",
 		0,
 		0,
-		params,
+		dbx.Params{"company": companyID},
 	)
 	if err != nil {
 		return err
@@ -944,9 +1082,6 @@ func createCompanyForUser(e *core.RequestEvent, user *core.Record, name string) 
 // canAccessAudit verifica se o usuario autenticado pode ver/editar uma auditoria
 // (criador, ou membro da mesma empresa).
 func canAccessAudit(e *core.RequestEvent, audit *core.Record) bool {
-	if audit.GetString("user") == e.Auth.Id {
-		return true
-	}
 	companyID := audit.GetString("company")
 	if companyID == "" || companyID != e.Auth.GetString("company") {
 		return false
@@ -984,12 +1119,39 @@ func newCompanyResponse(app core.App, company *core.Record) companyResponse {
 		})
 	}
 
+	pendingInvites := make([]companyInviteResponse, 0)
+	invites, err := app.FindRecordsByFilter(
+		"company_invites",
+		"company = {:company} && acceptedAt = ''",
+		"-created",
+		0,
+		0,
+		dbx.Params{"company": company.Id},
+	)
+	if err == nil {
+		now := time.Now().UTC()
+		for _, invite := range invites {
+			status := "pending"
+			if expiresAt, err := time.Parse(time.RFC3339, invite.GetString("expiresAt")); err == nil && now.After(expiresAt) {
+				status = "expired"
+			}
+			pendingInvites = append(pendingInvites, companyInviteResponse{
+				ID:        invite.Id,
+				Email:     invite.GetString("email"),
+				Status:    status,
+				CreatedAt: invite.GetDateTime("created").String(),
+				ExpiresAt: invite.GetString("expiresAt"),
+			})
+		}
+	}
+
 	return companyResponse{
-		ID:        company.Id,
-		Name:      company.GetString("name"),
-		OwnerID:   ownerID,
-		CreatedAt: company.GetDateTime("created").String(),
-		Members:   members,
+		ID:             company.Id,
+		Name:           company.GetString("name"),
+		OwnerID:        ownerID,
+		CreatedAt:      company.GetDateTime("created").String(),
+		Members:        members,
+		PendingInvites: pendingInvites,
 	}
 }
 
@@ -1042,7 +1204,7 @@ func handleInviteMember(e *core.RequestEvent) error {
 		return e.NotFoundError("Empresa nao encontrada.", err)
 	}
 	if company.GetString("owner") != e.Auth.Id {
-		return e.ForbiddenError("Apenas o proprietario pode adicionar membros.", nil)
+		return e.ForbiddenError("Apenas o proprietário pode adicionar membros.", nil)
 	}
 
 	invitee, err := e.App.FindAuthRecordByEmail("users", email)
@@ -1050,31 +1212,106 @@ func handleInviteMember(e *core.RequestEvent) error {
 		return e.BadRequestError("Usuario nao encontrado. Peca para a pessoa criar uma conta primeiro.", err)
 	}
 
-	// Se o usuario ja era de outra empresa, removemos a referencia anterior antes de movê-lo.
-	if previousID := invitee.GetString("company"); previousID != "" && previousID != company.Id {
-		if previous, err := e.App.FindRecordById("companies", previousID); err == nil {
-			previousMembers := filterStringSlice(previous.GetStringSlice("members"), invitee.Id)
-			previous.Set("members", previousMembers)
-			_ = e.App.Save(previous)
-		}
-	}
-
 	members := companyMemberIDs(company)
 	if containsString(members, invitee.Id) {
 		return e.BadRequestError("Usuário já é membro desta empresa.", nil)
 	}
-	members = appendUniqueString(members, invitee.Id)
-	company.Set("members", members)
+
+	token, err := generateSecureToken()
+	if err != nil {
+		return e.InternalServerError("Nao foi possivel gerar o convite.", err)
+	}
+	expiresAt := time.Now().UTC().Add(7 * 24 * time.Hour).Format(time.RFC3339)
+
+	invite, err := findOpenCompanyInvite(e.App, company.Id, invitee.Id)
+	if err != nil {
+		return err
+	}
+	if invite == nil {
+		collection, err := e.App.FindCollectionByNameOrId("company_invites")
+		if err != nil {
+			return err
+		}
+		invite = core.NewRecord(collection)
+		invite.Set("company", company.Id)
+		invite.Set("inviter", e.Auth.Id)
+		invite.Set("invitee", invitee.Id)
+		invite.Set("email", email)
+	}
+	invite.Set("tokenHash", hashInviteToken(token))
+	invite.Set("expiresAt", expiresAt)
+	invite.Set("acceptedAt", "")
+	if err := e.App.Save(invite); err != nil {
+		return e.BadRequestError("Nao foi possivel criar o convite.", err)
+	}
+
+	if err := sendCompanyInviteEmail(e, invitee.Email(), company.GetString("name"), token); err != nil {
+		return e.InternalServerError("Nao foi possivel enviar o convite.", err)
+	}
+
+	return e.JSON(http.StatusOK, newCompanyResponse(e.App, company))
+}
+
+func handleConfirmCompanyInvite(e *core.RequestEvent) error {
+	var req confirmCompanyInviteRequest
+	if err := e.BindBody(&req); err != nil {
+		return e.BadRequestError("Dados invalidos.", err)
+	}
+	token := strings.TrimSpace(req.Token)
+	if token == "" {
+		return e.BadRequestError("Convite invalido.", nil)
+	}
+
+	invites, err := e.App.FindRecordsByFilter(
+		"company_invites",
+		"tokenHash = {:tokenHash} && acceptedAt = ''",
+		"-created",
+		1,
+		0,
+		dbx.Params{"tokenHash": hashInviteToken(token)},
+	)
+	if err != nil || len(invites) == 0 {
+		return e.BadRequestError("Convite invalido ou expirado.", err)
+	}
+	invite := invites[0]
+
+	expiresAt, err := time.Parse(time.RFC3339, invite.GetString("expiresAt"))
+	if err != nil || time.Now().UTC().After(expiresAt) {
+		return e.BadRequestError("Convite expirado.", err)
+	}
+
+	company, err := e.App.FindRecordById("companies", invite.GetString("company"))
+	if err != nil {
+		return e.BadRequestError("Empresa nao encontrada.", err)
+	}
+	invitee, err := e.App.FindRecordById("users", invite.GetString("invitee"))
+	if err != nil {
+		return e.BadRequestError("Usuario nao encontrado.", err)
+	}
+
+	if previousID := invitee.GetString("company"); previousID != "" && previousID != company.Id {
+		if previous, err := e.App.FindRecordById("companies", previousID); err == nil {
+			previous.Set("members", filterStringSlice(companyMemberIDs(previous), invitee.Id))
+			_ = e.App.Save(previous)
+		}
+	}
+
+	company.Set("members", appendUniqueString(companyMemberIDs(company), invitee.Id))
 	if err := e.App.Save(company); err != nil {
-		return e.BadRequestError("Nao foi possivel adicionar o membro.", err)
+		return e.BadRequestError("Nao foi possivel confirmar o convite.", err)
 	}
 
 	invitee.Set("company", company.Id)
 	if err := e.App.Save(invitee); err != nil {
-		return e.BadRequestError("Nao foi possivel atualizar o membro.", err)
+		return e.BadRequestError("Nao foi possivel vincular o usuario a empresa.", err)
 	}
 
-	return e.JSON(http.StatusOK, newCompanyResponse(e.App, company))
+	invite.Set("acceptedAt", time.Now().UTC().Format(time.RFC3339))
+	if err := e.App.Save(invite); err != nil {
+		return e.BadRequestError("Nao foi possivel finalizar o convite.", err)
+	}
+
+	return e.JSON(http.StatusOK, confirmCompanyInviteResponse{Message: "Convite confirmado com sucesso."})
 }
 
 func handleRemoveMember(e *core.RequestEvent) error {
@@ -1247,9 +1484,6 @@ func resolveAuthForDownload(e *core.RequestEvent) (*core.Record, error) {
 // explicitamente (em vez de ler de e.Auth), util para handlers que fazem
 // autenticacao manual.
 func canAccessAuditAs(user *core.Record, audit *core.Record) bool {
-	if audit.GetString("user") == user.Id {
-		return true
-	}
 	companyID := audit.GetString("company")
 	if companyID == "" || companyID != user.GetString("company") {
 		return false

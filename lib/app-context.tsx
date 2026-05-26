@@ -85,13 +85,18 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  })
+  let response: Response
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+    })
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.')
+  }
 
   if (!response.ok) {
-    let message = 'Nao foi possivel completar a operacao.'
+    let message = 'Não foi possível completar a operação.'
     try {
       const data = await response.json()
       message = data.message || message
@@ -187,7 +192,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     user: { id: string; companyName: string; companyId?: string; email: string; createdAt: string }
   }) => {
     setToken(data.token)
-    const audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+    let audits: AuditRecord[] = []
+    try {
+      audits = await apiRequest<AuditRecord[]>('/api/whoiso/audits')
+    } catch {
+      // O OTP ja foi validado e o token salvo; falha ao carregar auditorias nao deve invalidar o login.
+    }
     setState(prev => ({
       ...prev,
       currentCompany: toCompany(data.user),
@@ -617,7 +627,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const company = await apiRequest<CompanyDetails>(`/api/whoiso/company/members/${memberId}`, {
         method: 'DELETE',
       })
-      await loadAudits()
+      if (memberId === state.currentCompany?.id) {
+        setState(prev => ({
+          ...prev,
+          currentCompany: prev.currentCompany
+            ? { ...prev.currentCompany, companyId: undefined, name: prev.currentCompany.email }
+            : prev.currentCompany,
+          currentModule: null,
+          currentResponses: [],
+          editingAuditId: null,
+          audits: [],
+          auditLogs: [],
+          selectedAuditId: null,
+          currentView: 'dashboard',
+        }))
+      } else {
+        await loadAudits()
+      }
       return { success: true, company }
     } catch (error) {
       return {

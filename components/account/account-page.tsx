@@ -1,13 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, CheckCircle2, Crown, Lock, Mail, Settings, UserMinus, Users } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  Crown,
+  Lock,
+  Mail,
+  Settings,
+  UserMinus,
+  Users,
+} from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDate } from "@/lib/audit-utils";
-import { CompanyDetails } from "@/lib/types";
+import { CompanyDetails, CompanyMember } from "@/lib/types";
 
 function IconSave({ size = 18 }: { size?: number }) {
   return (
@@ -101,6 +120,8 @@ export function AccountPage() {
   const [companyError, setCompanyError] = useState("");
   const [companySuccess, setCompanySuccess] = useState("");
   const [companyLoading, setCompanyLoading] = useState(false);
+  const [memberPendingRemoval, setMemberPendingRemoval] =
+    useState<CompanyMember | null>(null);
 
   const audits = getCompanyAudits();
   const hasCompany = Boolean(currentCompany?.companyId);
@@ -147,7 +168,7 @@ export function AccountPage() {
 
     setCompany(result.company);
     setInviteEmail("");
-    setCompanySuccess(`Membro adicionado: ${trimmed}.`);
+    setCompanySuccess(`Convite enviado para ${trimmed}.`);
   };
 
   const handleRemoveMember = async (memberId: string) => {
@@ -164,6 +185,20 @@ export function AccountPage() {
 
     setCompany(result.company);
     setCompanySuccess("Membro removido.");
+  };
+
+  const requestRemoveMember = (member: CompanyMember) => {
+    setCompanyError("");
+    setCompanySuccess("");
+    setMemberPendingRemoval(member);
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!memberPendingRemoval) return;
+
+    const member = memberPendingRemoval;
+    setMemberPendingRemoval(null);
+    await handleRemoveMember(member.id);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -236,7 +271,11 @@ export function AccountPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className={hasCompany ? "grid gap-4 md:grid-cols-2" : "grid gap-4"}>
+            <div
+              className={
+                hasCompany ? "grid gap-4 md:grid-cols-2" : "grid gap-4"
+              }
+            >
               {hasCompany && (
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Nome da empresa</Label>
@@ -253,7 +292,11 @@ export function AccountPage() {
                       }}
                       readOnly={!isOwner}
                       aria-readonly={!isOwner}
-                      title={isOwner ? undefined : "Somente o proprietário da empresa pode alterar o nome."}
+                      title={
+                        isOwner
+                          ? undefined
+                          : "Somente o proprietário da empresa pode alterar o nome."
+                      }
                       className={
                         isOwner
                           ? "h-12 rounded-xl pl-11"
@@ -420,10 +463,13 @@ export function AccountPage() {
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="font-semibold text-slate-900">Empresa e membros</h2>
+              <h2 className="font-semibold text-slate-900">
+                Empresa e membros
+              </h2>
               <p className="text-xs text-slate-500">
                 Auditorias são compartilhadas entre os membros da empresa.
-                {isOwner && " Apenas você (proprietário) pode adicionar ou remover membros."}
+                {isOwner &&
+                  " Apenas você (proprietário) pode adicionar ou remover membros."}
               </p>
             </div>
           </div>
@@ -431,17 +477,24 @@ export function AccountPage() {
           {company ? (
             <div className="space-y-6">
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs uppercase tracking-widest text-slate-400">Empresa</p>
-                <p className="mt-1 text-base font-semibold text-slate-900">{company.name}</p>
+                <p className="text-xs uppercase tracking-widest text-slate-400">
+                  Empresa
+                </p>
+                <p className="mt-1 text-base font-semibold text-slate-900">
+                  {company.name}
+                </p>
                 <p className="text-xs text-slate-500">
-                  Criada em {formatDate(company.createdAt)} - {company.members.length}{" "}
+                  Criada em {formatDate(company.createdAt)} -{" "}
+                  {company.members.length}{" "}
                   {company.members.length === 1 ? "membro" : "membros"}
                 </p>
               </div>
 
               {isOwner && (
                 <form onSubmit={handleInvite} className="space-y-2">
-                  <Label htmlFor="inviteEmail">Adicionar membro por email</Label>
+                  <Label htmlFor="inviteEmail">
+                    Adicionar membro por e-mail
+                  </Label>
                   <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -468,7 +521,8 @@ export function AccountPage() {
                     </Button>
                   </div>
                   <p className="text-xs text-slate-500">
-                    O usuário precisa ter uma conta no WhoISO. Ao adicionar, ele passa a enxergar as auditorias da empresa.
+                    O usuário precisa ter uma conta no WhoISO. Ao adicionar, ele
+                    passa a enxergar as auditorias da empresa.
                   </p>
                 </form>
               )}
@@ -492,6 +546,7 @@ export function AccountPage() {
                     <tr>
                       <th className="px-4 py-3">Membro</th>
                       <th className="px-4 py-3">Cadastro</th>
+                      <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3 text-right">Ações</th>
                     </tr>
                   </thead>
@@ -507,31 +562,62 @@ export function AccountPage() {
                                 Proprietário
                               </span>
                             )}
-                            {member.id === currentCompany?.id && !member.isOwner && (
-                              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                                Você
-                              </span>
-                            )}
+                            {member.id === currentCompany?.id &&
+                              !member.isOwner && (
+                                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                                  Você
+                                </span>
+                              )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-slate-500">
                           {formatDate(member.createdAt)}
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          {!member.isOwner && (isOwner || member.id === currentCompany?.id) && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveMember(member.id)}
-                              disabled={companyLoading}
-                              className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                            >
-                              <UserMinus className="mr-1 h-4 w-4" />
-                              {member.id === currentCompany?.id ? "Sair" : "Remover"}
-                            </Button>
-                          )}
+                        <td className="px-4 py-3">
+                          <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                            Confirmado
+                          </span>
                         </td>
+                        <td className="px-4 py-3 text-right">
+                          {!member.isOwner &&
+                            (isOwner || member.id === currentCompany?.id) && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => requestRemoveMember(member)}
+                                disabled={companyLoading}
+                                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                              >
+                                <UserMinus className="mr-1 h-4 w-4" />
+                                {member.id === currentCompany?.id
+                                  ? "Sair"
+                                  : "Remover"}
+                              </Button>
+                            )}
+                        </td>
+                      </tr>
+                    ))}
+                    {(company.pendingInvites || []).map((invite) => (
+                      <tr key={invite.id}>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-slate-900">{invite.email}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500">
+                          {formatDate(invite.createdAt)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={
+                              invite.status === "expired"
+                                ? "inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"
+                                : "inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                            }
+                          >
+                            {invite.status === "expired" ? "Expirado" : "Não confirmado"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right" />
                       </tr>
                     ))}
                   </tbody>
@@ -539,10 +625,47 @@ export function AccountPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Carregando informações da empresa...</p>
+            <p className="text-sm text-slate-500">
+              Carregando informações da empresa...
+            </p>
           )}
         </section>
       )}
+      <AlertDialog
+        open={memberPendingRemoval !== null}
+        onOpenChange={(open) => {
+          if (!open) setMemberPendingRemoval(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {memberPendingRemoval?.id === currentCompany?.id
+                ? "Sair da empresa?"
+                : "Remover membro?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {memberPendingRemoval?.id === currentCompany?.id
+                ? "Você deixará de acessar as auditorias e informações compartilhadas desta empresa."
+                : `O usuário ${memberPendingRemoval?.email || "selecionado"} perderá acesso às auditorias e informações compartilhadas desta empresa.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={companyLoading}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemoveMember}
+              disabled={companyLoading}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {memberPendingRemoval?.id === currentCompany?.id
+                ? "Sair"
+                : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

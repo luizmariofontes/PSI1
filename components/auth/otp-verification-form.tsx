@@ -22,7 +22,7 @@ export function OTPVerificationForm({ challenge, onBack, onVerified }: OTPVerifi
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (code.length !== 6) {
-      setError('Informe o codigo de 6 digitos.')
+      setError('Informe o código de 6 dígitos.')
       return
     }
 
@@ -45,13 +45,13 @@ export function OTPVerificationForm({ challenge, onBack, onVerified }: OTPVerifi
       </div>
 
       <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">
-        Verificacao
+        Verificação
       </p>
       <h2 className="mt-3 text-4xl font-bold text-slate-900">
-        Informe o codigo
+        Informe o código
       </h2>
       <p className="mt-3 text-base leading-7 text-slate-500">
-        Enviamos um codigo de 6 digitos para <span className="font-semibold text-slate-700">{challenge.email}</span>.
+        Enviamos um código de 6 dígitos para <span className="font-semibold text-slate-700">{challenge.email}</span>.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-9 space-y-6">
@@ -82,7 +82,7 @@ export function OTPVerificationForm({ challenge, onBack, onVerified }: OTPVerifi
         )}
 
         <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl bg-blue-600 font-semibold hover:bg-blue-700">
-          {loading ? 'Validando...' : 'Validar codigo'}
+          {loading ? 'Validando...' : 'Validar código'}
         </Button>
 
         <Button type="button" variant="ghost" onClick={onBack} className="h-11 w-full rounded-xl">

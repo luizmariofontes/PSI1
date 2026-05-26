@@ -50,12 +50,21 @@ export interface CompanyMember {
   createdAt: string
 }
 
+export interface CompanyInvite {
+  id: string
+  email: string
+  status: 'pending' | 'expired'
+  createdAt: string
+  expiresAt: string
+}
+
 export interface CompanyDetails {
   id: string
   name: string
   ownerId: string
   createdAt: string
   members: CompanyMember[]
+  pendingInvites?: CompanyInvite[]
 }
 
 export interface AuditLog {
