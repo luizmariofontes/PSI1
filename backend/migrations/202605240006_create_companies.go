@@ -32,7 +32,7 @@ func init() {
 
 		ensureField(companies, &core.TextField{Name: "name", Required: true, Max: 120})
 		ensureField(companies, &core.RelationField{Name: "owner", CollectionId: users.Id, Required: false, MaxSelect: 1})
-		ensureField(companies, &core.RelationField{Name: "members", CollectionId: users.Id, Required: false, MaxSelect: 0})
+		ensureField(companies, &core.RelationField{Name: "members", CollectionId: users.Id, Required: false, MaxSelect: 999})
 		ensureField(companies, &core.AutodateField{Name: "created", System: true, OnCreate: true})
 		ensureField(companies, &core.AutodateField{Name: "updated", System: true, OnCreate: true, OnUpdate: true})
 

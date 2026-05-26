@@ -102,6 +102,19 @@ func TestFilterStringSlice_NoMatchKeepsAll(t *testing.T) {
 	}
 }
 
+func TestMergeUniqueStrings_PreservesOrderAndSkipsDuplicates(t *testing.T) {
+	result := mergeUniqueStrings([]string{"owner", "a", "owner"}, "b", "a", "", "c")
+	expected := []string{"owner", "a", "b", "c"}
+	if len(result) != len(expected) {
+		t.Fatalf("tamanho inesperado: %v", result)
+	}
+	for i := range expected {
+		if result[i] != expected[i] {
+			t.Fatalf("resultado inesperado: %v", result)
+		}
+	}
+}
+
 // Garante que o hash da trilha de auditoria seja deterministico para o mesmo
 // payload e mude quando qualquer campo (incluindo a nova evidencia inserida em
 // "responses") for alterado.

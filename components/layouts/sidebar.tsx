@@ -317,6 +317,7 @@ export function Sidebar() {
   const [pendingModule, setPendingModule] = useState<'iso27001' | 'iso27701' | null>(null)
   const [pendingAuditDate, setPendingAuditDate] = useState(getTodayDateString())
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const hasCompany = Boolean(currentCompany?.companyId)
 
   const navigate = (view: ViewMode) => {
     if (currentModule && currentView === 'audit') {
@@ -326,6 +327,8 @@ export function Sidebar() {
   }
 
   const requestStartAudit = (module: 'iso27001' | 'iso27701') => {
+    if (!hasCompany) return
+
     setPendingAuditDate(getTodayDateString())
     setPendingModule(module)
   }
@@ -423,34 +426,38 @@ export function Sidebar() {
           />
         </div>
 
-        {/* Divider */}
-        <div className="my-4 mx-2" style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+        {hasCompany && (
+          <>
+            {/* Divider */}
+            <div className="my-4 mx-2" style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
 
-        {/* Section: Auditorias */}
-        {!collapsed && (
-          <p className="text-xs font-semibold uppercase tracking-widest px-3 mb-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
-            Nova Auditoria
-          </p>
+            {/* Section: Auditorias */}
+            {!collapsed && (
+              <p className="text-xs font-semibold uppercase tracking-widest px-3 mb-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                Nova Auditoria
+              </p>
+            )}
+
+            <div className="space-y-1">
+              <NavItem
+                icon={<IconShield />}
+                label="ISO 27001 / 27002"
+                active={currentView === 'audit' && currentModule === 'iso27001'}
+                collapsed={collapsed}
+                onClick={() => requestStartAudit('iso27001')}
+                accent="#10b981"
+              />
+              <NavItem
+                icon={<IconLock />}
+                label="ISO 27701"
+                active={currentView === 'audit' && currentModule === 'iso27701'}
+                collapsed={collapsed}
+                onClick={() => requestStartAudit('iso27701')}
+                accent="#f59e0b"
+              />
+            </div>
+          </>
         )}
-
-        <div className="space-y-1">
-          <NavItem
-            icon={<IconShield />}
-            label="ISO 27001 / 27002"
-            active={currentView === 'audit' && currentModule === 'iso27001'}
-            collapsed={collapsed}
-            onClick={() => requestStartAudit('iso27001')}
-            accent="#10b981"
-          />
-          <NavItem
-            icon={<IconLock />}
-            label="ISO 27701"
-            active={currentView === 'audit' && currentModule === 'iso27701'}
-            collapsed={collapsed}
-            onClick={() => requestStartAudit('iso27701')}
-            accent="#f59e0b"
-          />
-        </div>
       </nav>
 
       {/* Footer */}

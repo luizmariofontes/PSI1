@@ -650,6 +650,11 @@ func handleCreateAudit(e *core.RequestEvent) error {
 		return e.BadRequestError(err.Error(), nil)
 	}
 
+	companyID := e.Auth.GetString("company")
+	if companyID == "" {
+		return e.BadRequestError("Usuario precisa estar vinculado a uma empresa para criar auditorias.", nil)
+	}
+
 	collection, err := e.App.FindCollectionByNameOrId("audits")
 	if err != nil {
 		return err
@@ -661,12 +666,9 @@ func handleCreateAudit(e *core.RequestEvent) error {
 		return err
 	}
 
-	companyID := e.Auth.GetString("company")
 	companyName := e.Auth.GetString("companyName")
-	if companyID != "" {
-		if companyRecord, err := e.App.FindRecordById("companies", companyID); err == nil {
-			companyName = companyRecord.GetString("name")
-		}
+	if companyRecord, err := e.App.FindRecordById("companies", companyID); err == nil {
+		companyName = companyRecord.GetString("name")
 	}
 
 	audit.Set("user", e.Auth.Id)
@@ -965,7 +967,7 @@ func loadCompanyForAuth(e *core.RequestEvent) (*core.Record, error) {
 }
 
 func newCompanyResponse(app core.App, company *core.Record) companyResponse {
-	memberIDs := company.GetStringSlice("members")
+	memberIDs := companyMemberIDs(company)
 	members := make([]companyMemberResponse, 0, len(memberIDs))
 	ownerID := company.GetString("owner")
 
@@ -1057,13 +1059,14 @@ func handleInviteMember(e *core.RequestEvent) error {
 		}
 	}
 
-	members := company.GetStringSlice("members")
-	if !containsString(members, invitee.Id) {
-		members = append(members, invitee.Id)
-		company.Set("members", members)
-		if err := e.App.Save(company); err != nil {
-			return e.BadRequestError("Nao foi possivel adicionar o membro.", err)
-		}
+	members := companyMemberIDs(company)
+	if containsString(members, invitee.Id) {
+		return e.BadRequestError("Usuário já é membro desta empresa.", nil)
+	}
+	members = appendUniqueString(members, invitee.Id)
+	company.Set("members", members)
+	if err := e.App.Save(company); err != nil {
+		return e.BadRequestError("Nao foi possivel adicionar o membro.", err)
 	}
 
 	invitee.Set("company", company.Id)
@@ -1092,7 +1095,7 @@ func handleRemoveMember(e *core.RequestEvent) error {
 		return e.BadRequestError("O proprietario nao pode ser removido.", nil)
 	}
 
-	members := filterStringSlice(company.GetStringSlice("members"), memberID)
+	members := filterStringSlice(companyMemberIDs(company), memberID)
 	company.Set("members", members)
 	if err := e.App.Save(company); err != nil {
 		return e.BadRequestError("Nao foi possivel remover o membro.", err)
@@ -1276,6 +1279,28 @@ func containsString(values []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func appendUniqueString(values []string, target string) []string {
+	if target == "" || containsString(values, target) {
+		return values
+	}
+	return append(values, target)
+}
+
+func mergeUniqueStrings(values []string, extras ...string) []string {
+	result := make([]string, 0, len(values)+len(extras))
+	for _, value := range values {
+		result = appendUniqueString(result, value)
+	}
+	for _, value := range extras {
+		result = appendUniqueString(result, value)
+	}
+	return result
+}
+
+func companyMemberIDs(company *core.Record) []string {
+	return mergeUniqueStrings([]string{company.GetString("owner")}, company.GetStringSlice("members")...)
 }
 
 func filterStringSlice(values []string, target string) []string {

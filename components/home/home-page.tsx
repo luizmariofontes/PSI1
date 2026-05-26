@@ -10,6 +10,7 @@ import { getTodayDateString } from '@/lib/audit-utils'
 
 export function HomePage() {
   const { 
+    currentCompany,
     selectModule, 
     setView, 
     getCompanyAudits,
@@ -23,8 +24,11 @@ export function HomePage() {
   const iso27001Audits = getCompanyAudits('iso27001')
   const iso27701Audits = getCompanyAudits('iso27701')
   const allAudits = getCompanyAudits()
+  const hasCompany = Boolean(currentCompany?.companyId)
 
   const requestStartAudit = (module: 'iso27001' | 'iso27701') => {
+    if (!hasCompany) return
+
     setPendingAuditDate(getTodayDateString())
     setPendingModule(module)
   }
@@ -51,7 +55,9 @@ export function HomePage() {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900">Bem-vindo ao WhoISO</h2>
         <p className="text-slate-600 mt-1">
-          Selecione um módulo para iniciar uma nova auditoria ou visualize os dashboards de auditorias anteriores.
+          {hasCompany
+            ? 'Selecione um módulo para iniciar uma nova auditoria ou visualize os dashboards de auditorias anteriores.'
+            : 'Sua conta ainda não está vinculada a uma empresa. Peça ao proprietário para adicionar seu email.'}
         </p>
       </div>
 
@@ -95,77 +101,79 @@ export function HomePage() {
       )}
 
       {/* Module Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <Shield className="h-6 w-6 text-slate-700" />
+      {hasCompany && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <Shield className="h-6 w-6 text-slate-700" />
+                </div>
+                <div>
+                  <CardTitle>ISO 27001 / 27002</CardTitle>
+                  <CardDescription>Segurança da Informação</CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle>ISO 27001 / 27002</CardTitle>
-                <CardDescription>Segurança da Informação</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600 mb-4">
-              Diagnóstico de conformidade com os requisitos da ISO 27001 e controles da ISO 27002 para sistemas de gestão de segurança da informação.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={() => requestStartAudit('iso27001')} className="flex-1">
-                Nova Auditoria
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-              {iso27001Audits.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleViewDashboard('iso27001')}
-                  className="flex-1"
-                >
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Ver Dashboard
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600 mb-4">
+                Diagnóstico de conformidade com os requisitos da ISO 27001 e controles da ISO 27002 para sistemas de gestão de segurança da informação.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={() => requestStartAudit('iso27001')} className="flex-1">
+                  Nova Auditoria
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                {iso27001Audits.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleViewDashboard('iso27001')}
+                    className="flex-1"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Ver Dashboard
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <Lock className="h-6 w-6 text-slate-700" />
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <Lock className="h-6 w-6 text-slate-700" />
+                </div>
+                <div>
+                  <CardTitle>ISO 27701</CardTitle>
+                  <CardDescription>Privacidade de Dados</CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle>ISO 27701</CardTitle>
-                <CardDescription>Privacidade de Dados</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600 mb-4">
-              Diagnóstico de conformidade com os controles de privacidade para proteção de dados pessoais (DP).
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={() => requestStartAudit('iso27701')} className="flex-1">
-                Nova Auditoria
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-              {iso27701Audits.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleViewDashboard('iso27701')}
-                  className="flex-1"
-                >
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Ver Dashboard
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600 mb-4">
+                Diagnóstico de conformidade com os controles de privacidade para proteção de dados pessoais (DP).
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={() => requestStartAudit('iso27701')} className="flex-1">
+                  Nova Auditoria
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                {iso27701Audits.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleViewDashboard('iso27701')}
+                    className="flex-1"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Ver Dashboard
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Combined Dashboard */}
       {allAudits.length > 0 && (

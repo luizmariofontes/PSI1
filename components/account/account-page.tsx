@@ -1,13 +1,82 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, CheckCircle2, Crown, Lock, Mail, Settings, UserMinus, UserPlus, Users } from "lucide-react";
+import { Building2, CheckCircle2, Crown, Lock, Mail, Settings, UserMinus, Users } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/audit-utils";
 import { CompanyDetails } from "@/lib/types";
+
+function IconSave({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="itshover-save"
+      style={{ overflow: "visible", transformOrigin: "center" }}
+    >
+      <style>{`
+        .group:hover .itshover-save, .itshover-save:hover { animation: save-pulse 0.4s ease-in-out; }
+        .group:hover .save-label, .itshover-save:hover .save-label { animation: save-label-pulse 0.4s ease-in-out; }
+        @keyframes save-pulse { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-1px)} }
+        @keyframes save-label-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+      `}</style>
+      <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path
+        className="save-shutter"
+        d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"
+      />
+      <path
+        className="save-label"
+        d="M7 3v4a1 1 0 0 0 1 1h7"
+        style={{ transformOrigin: "center" }}
+      />
+    </svg>
+  );
+}
+
+function IconUserPlusAnimated({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="itshover-user-plus"
+      style={{ overflow: "visible" }}
+    >
+      <style>{`
+        .group:hover .user-avatar, .itshover-user-plus:hover .user-avatar { animation: user-avatar-bounce 0.35s ease-out; }
+        .group:hover .plus-sign, .itshover-user-plus:hover .plus-sign { animation: user-plus-rotate 0.35s ease-out; }
+        @keyframes user-avatar-bounce { 0%,100%{transform:translateY(0) scale(1)} 55%{transform:translateY(-1px) scale(1.05)} }
+        @keyframes user-plus-rotate { 0%,100%{transform:rotate(0deg) scale(1)} 55%{transform:rotate(90deg) scale(1.15)} }
+      `}</style>
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <g className="user-avatar" style={{ transformOrigin: "50% 50%" }}>
+        <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+        <path d="M6 21v-2a4 4 0 0 1 4 -4h4" />
+      </g>
+      <g className="plus-sign" style={{ transformOrigin: "19px 19px" }}>
+        <path d="M16 19h6" />
+        <path d="M19 16v6" />
+      </g>
+    </svg>
+  );
+}
 
 export function AccountPage() {
   const {
@@ -72,7 +141,7 @@ export function AccountPage() {
     setCompanyLoading(false);
 
     if (!result.success || !result.company) {
-      setCompanyError(result.error || "Nao foi possivel adicionar o membro.");
+      setCompanyError(result.error || "Não foi possível adicionar o membro.");
       return;
     }
 
@@ -89,7 +158,7 @@ export function AccountPage() {
     setCompanyLoading(false);
 
     if (!result.success || !result.company) {
-      setCompanyError(result.error || "Nao foi possivel remover o membro.");
+      setCompanyError(result.error || "Não foi possível remover o membro.");
       return;
     }
 
@@ -118,7 +187,7 @@ export function AccountPage() {
 
     setLoading(true);
     const result = await updateAccount({
-      // Usuario nao-proprietario nao tem permissao para renomear a empresa.
+      // Usuário não proprietário não tem permissão para renomear a empresa.
       companyName: isOwner ? companyName : "",
       email,
       currentPassword,
@@ -184,7 +253,7 @@ export function AccountPage() {
                       }}
                       readOnly={!isOwner}
                       aria-readonly={!isOwner}
-                      title={isOwner ? undefined : "Somente o proprietario da empresa pode alterar o nome."}
+                      title={isOwner ? undefined : "Somente o proprietário da empresa pode alterar o nome."}
                       className={
                         isOwner
                           ? "h-12 rounded-xl pl-11"
@@ -298,8 +367,9 @@ export function AccountPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="h-11 rounded-xl bg-blue-600 px-6 font-semibold hover:bg-blue-700"
+                className="group h-11 rounded-xl bg-blue-600 px-6 font-semibold hover:bg-blue-700"
               >
+                <IconSave />
                 {loading ? "Salvando..." : "Salvar alterações"}
               </Button>
             </div>
@@ -344,136 +414,134 @@ export function AccountPage() {
       </div>
 
       {hasCompany && (
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-            <Users className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-slate-900">Empresa e membros</h2>
-            <p className="text-xs text-slate-500">
-              Auditorias sao compartilhadas entre os membros da empresa.
-              {isOwner && " Apenas voce (proprietario) pode adicionar ou remover membros."}
-            </p>
-          </div>
-        </div>
-
-        {company ? (
-          <div className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs uppercase tracking-widest text-slate-400">Empresa</p>
-              <p className="mt-1 text-base font-semibold text-slate-900">{company.name}</p>
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-slate-900">Empresa e membros</h2>
               <p className="text-xs text-slate-500">
-                Criada em {formatDate(company.createdAt)} - {company.members.length}{" "}
-                {company.members.length === 1 ? "membro" : "membros"}
+                Auditorias são compartilhadas entre os membros da empresa.
+                {isOwner && " Apenas você (proprietário) pode adicionar ou remover membros."}
               </p>
             </div>
+          </div>
 
-            {isOwner && (
-              <form onSubmit={handleInvite} className="grid gap-3 md:grid-cols-[1fr_auto]">
-                <div className="space-y-2">
+          {company ? (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-xs uppercase tracking-widest text-slate-400">Empresa</p>
+                <p className="mt-1 text-base font-semibold text-slate-900">{company.name}</p>
+                <p className="text-xs text-slate-500">
+                  Criada em {formatDate(company.createdAt)} - {company.members.length}{" "}
+                  {company.members.length === 1 ? "membro" : "membros"}
+                </p>
+              </div>
+
+              {isOwner && (
+                <form onSubmit={handleInvite} className="space-y-2">
                   <Label htmlFor="inviteEmail">Adicionar membro por email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input
-                      id="inviteEmail"
-                      type="email"
-                      placeholder="auditor@empresa.com"
-                      value={inviteEmail}
-                      onChange={(event) => {
-                        setInviteEmail(event.target.value);
-                        setCompanyError("");
-                        setCompanySuccess("");
-                      }}
-                      className="h-12 rounded-xl pl-11"
-                    />
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        id="inviteEmail"
+                        type="email"
+                        placeholder="auditor@empresa.com"
+                        value={inviteEmail}
+                        onChange={(event) => {
+                          setInviteEmail(event.target.value);
+                          setCompanyError("");
+                          setCompanySuccess("");
+                        }}
+                        className="h-12 rounded-xl pl-11"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={companyLoading}
+                      className="group h-12 w-full rounded-xl bg-emerald-600 px-5 font-semibold hover:bg-emerald-700 md:w-auto"
+                    >
+                      <IconUserPlusAnimated />
+                      {companyLoading ? "Adicionando..." : "Adicionar"}
+                    </Button>
                   </div>
                   <p className="text-xs text-slate-500">
-                    O usuario precisa ter uma conta no WhoISO. Ao adicionar, ele passa a enxergar as auditorias da empresa.
+                    O usuário precisa ter uma conta no WhoISO. Ao adicionar, ele passa a enxergar as auditorias da empresa.
                   </p>
+                </form>
+              )}
+
+              {companyError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  {companyError}
                 </div>
-                <div className="flex items-end">
-                  <Button
-                    type="submit"
-                    disabled={companyLoading}
-                    className="h-12 rounded-xl bg-emerald-600 px-5 font-semibold hover:bg-emerald-700"
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    {companyLoading ? "Adicionando..." : "Adicionar"}
-                  </Button>
+              )}
+
+              {companySuccess && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {companySuccess}
                 </div>
-              </form>
-            )}
+              )}
 
-            {companyError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                {companyError}
-              </div>
-            )}
-
-            {companySuccess && (
-              <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                {companySuccess}
-              </div>
-            )}
-
-            <div className="overflow-hidden rounded-xl border border-slate-200">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">Membro</th>
-                    <th className="px-4 py-3">Cadastro</th>
-                    <th className="px-4 py-3 text-right">Acoes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {company.members.map((member) => (
-                    <tr key={member.id}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 font-medium text-slate-900">
-                          {member.email}
-                          {member.isOwner && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                              <Crown className="h-3 w-3" />
-                              Proprietario
-                            </span>
-                          )}
-                          {member.id === currentCompany?.id && !member.isOwner && (
-                            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                              Voce
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-500">
-                        {formatDate(member.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {!member.isOwner && (isOwner || member.id === currentCompany?.id) && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveMember(member.id)}
-                            disabled={companyLoading}
-                            className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                          >
-                            <UserMinus className="mr-1 h-4 w-4" />
-                            {member.id === currentCompany?.id ? "Sair" : "Remover"}
-                          </Button>
-                        )}
-                      </td>
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Membro</th>
+                      <th className="px-4 py-3">Cadastro</th>
+                      <th className="px-4 py-3 text-right">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {company.members.map((member) => (
+                      <tr key={member.id}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 font-medium text-slate-900">
+                            {member.email}
+                            {member.isOwner && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                <Crown className="h-3 w-3" />
+                                Proprietário
+                              </span>
+                            )}
+                            {member.id === currentCompany?.id && !member.isOwner && (
+                              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                                Você
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500">
+                          {formatDate(member.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {!member.isOwner && (isOwner || member.id === currentCompany?.id) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMember(member.id)}
+                              disabled={companyLoading}
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                            >
+                              <UserMinus className="mr-1 h-4 w-4" />
+                              {member.id === currentCompany?.id ? "Sair" : "Remover"}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">Carregando informacoes da empresa...</p>
-        )}
-      </section>
+          ) : (
+            <p className="text-sm text-slate-500">Carregando informações da empresa...</p>
+          )}
+        </section>
       )}
     </div>
   );

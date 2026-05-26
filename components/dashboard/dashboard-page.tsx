@@ -93,10 +93,13 @@ export function DashboardPage() {
   const iso27001Audits = getCompanyAudits('iso27001')
   const iso27701Audits = getCompanyAudits('iso27701')
   const hasAudits = allAudits.length > 0
+  const hasCompany = Boolean(currentCompany?.companyId)
 
   const selectedAudit = selectedAuditId ? getAuditById(selectedAuditId) : null
 
   const requestStartAudit = (module: 'iso27001' | 'iso27701') => {
+    if (!hasCompany) return
+
     setPendingAuditDate(getTodayDateString())
     setPendingModule(module)
   }
@@ -207,32 +210,33 @@ export function DashboardPage() {
           </div>
         )}
 
-        {/* ── Module shortcut cards ── */}
-        <div>
-          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-3">
-            {hasAudits ? 'Atalhos — Nova Auditoria' : 'Selecione um módulo para começar'}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ModuleCard
-              icon={<Shield className="h-5 w-5" />}
-              title="ISO 27001 / 27002"
-              subtitle="Segurança da Informação"
-              description="Diagnóstico de conformidade com os requisitos da ISO 27001 e controles da ISO 27002 para sistemas de gestão de segurança da informação."
-              accentColor="#10b981"
-              accentBg="#10b98115"
-              onNewAudit={() => requestStartAudit('iso27001')}
-            />
-            <ModuleCard
-              icon={<Lock className="h-5 w-5" />}
-              title="ISO 27701"
-              subtitle="Privacidade de Dados"
-              description="Diagnóstico de conformidade com os controles de privacidade para proteção de dados pessoais (DP)."
-              accentColor="#f59e0b"
-              accentBg="#f59e0b15"
-              onNewAudit={() => requestStartAudit('iso27701')}
-            />
+        {hasCompany && (
+          <div>
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-3">
+              {hasAudits ? 'Atalhos — Nova Auditoria' : 'Selecione um módulo para começar'}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ModuleCard
+                icon={<Shield className="h-5 w-5" />}
+                title="ISO 27001 / 27002"
+                subtitle="Segurança da Informação"
+                description="Diagnóstico de conformidade com os requisitos da ISO 27001 e controles da ISO 27002 para sistemas de gestão de segurança da informação."
+                accentColor="#10b981"
+                accentBg="#10b98115"
+                onNewAudit={() => requestStartAudit('iso27001')}
+              />
+              <ModuleCard
+                icon={<Lock className="h-5 w-5" />}
+                title="ISO 27701"
+                subtitle="Privacidade de Dados"
+                description="Diagnóstico de conformidade com os controles de privacidade para proteção de dados pessoais (DP)."
+                accentColor="#f59e0b"
+                accentBg="#f59e0b15"
+                onNewAudit={() => requestStartAudit('iso27701')}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Dashboard charts (only when has audits) ── */}
         {hasAudits && (
@@ -370,7 +374,7 @@ export function DashboardPage() {
         )}
 
         {/* ── Empty state (no audits yet) ── */}
-        {!hasAudits && (
+        {!hasAudits && hasCompany && (
           <div
             className="rounded-2xl p-10 text-center"
             style={{ background: '#fff', border: '1px dashed rgba(0,0,0,0.1)' }}
@@ -381,6 +385,21 @@ export function DashboardPage() {
             <h3 className="text-base font-semibold text-slate-700 mb-1">Nenhuma auditoria ainda</h3>
             <p className="text-sm text-slate-400">
               Selecione um módulo acima para iniciar seu primeiro diagnóstico de conformidade.
+            </p>
+          </div>
+        )}
+
+        {!hasCompany && (
+          <div
+            className="rounded-2xl p-10 text-center"
+            style={{ background: '#fff', border: '1px dashed rgba(0,0,0,0.1)' }}
+          >
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#64748b15' }}>
+              <Lock className="h-7 w-7 text-slate-500" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-700 mb-1">Conta sem empresa vinculada</h3>
+            <p className="text-sm text-slate-400">
+              Peça ao proprietário da empresa para adicionar seu email antes de iniciar auditorias.
             </p>
           </div>
         )}
