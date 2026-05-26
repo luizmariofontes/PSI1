@@ -22,6 +22,7 @@ services:
     environment:
       RESEND_API_KEY: ${RESEND_API_KEY}
       OTP_HASH_SECRET: ${OTP_HASH_SECRET}
+      WHOISO_APP_URL: ${WHOISO_APP_URL:-https://whoiso.lsx.li}
       TZ: ${TZ:-America/Sao_Paulo}
     volumes:
       - pocketbase_data:/app/pb_data

@@ -604,14 +604,44 @@ func companyInviteConfirmURL(e *core.RequestEvent, token string) string {
 	}
 	if base == "" {
 		origin := e.Request.Header.Get("Origin")
-		if isAllowedDevOrigin(origin) {
+		if isAllowedAppOrigin(origin) {
 			base = strings.TrimRight(origin, "/")
 		}
+	}
+	if base == "" {
+		base = requestBaseURL(e)
 	}
 	if base == "" {
 		base = "http://localhost:3000"
 	}
 	return base + "/invite/confirm?token=" + token
+}
+
+func isAllowedAppOrigin(origin string) bool {
+	return strings.HasPrefix(origin, "http://localhost:") ||
+		strings.HasPrefix(origin, "http://127.0.0.1:") ||
+		strings.HasPrefix(origin, "https://")
+}
+
+func requestBaseURL(e *core.RequestEvent) string {
+	host := e.Request.Header.Get("X-Forwarded-Host")
+	if host == "" {
+		host = e.Request.Host
+	}
+	if host == "" {
+		return ""
+	}
+
+	proto := e.Request.Header.Get("X-Forwarded-Proto")
+	if proto == "" {
+		if e.Request.TLS != nil {
+			proto = "https"
+		} else {
+			proto = "http"
+		}
+	}
+
+	return strings.TrimRight(proto+"://"+host, "/")
 }
 
 func companyInviteEmailHTML(companyName string, confirmURL string) string {
